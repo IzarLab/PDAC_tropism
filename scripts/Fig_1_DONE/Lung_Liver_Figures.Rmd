@@ -6,6 +6,11 @@ output:
 ---
 
 ```{r setup}
+#knitr::opts_chunk$set(echo = TRUE)
+
+#install.packages("survminer")
+#install.packages("ggpubr")
+#install.packages("zip")
 
 #Load packages
 library(lubridate)
@@ -23,28 +28,28 @@ library(knitr)
 
 #Uploading data
 
-retrospective = read.csv("../Misc/fullcohort.csv",stringsAsFactors = F)
+retrospective = read.csv("../../Misc/fullcohort.csv",stringsAsFactors = F)
 retrospective = retrospective %>% filter(is.na(id) == FALSE)
-retrospectiveseq = read.csv("../Misc/seqcohort.csv",stringsAsFactors = F)
+retrospectiveseq = read.csv("../../Misc/seqcohort.csv",stringsAsFactors = F)
 retrospectiveseq = retrospectiveseq %>% filter(is.na(id) == FALSE)
 
-swimlung = read.csv("../Misc/lungswim.csv",stringsAsFactors = F)
+swimlung = read.csv("../../Misc/lungswim.csv",stringsAsFactors = F)
 swimlung$time = swimlung$time/365
 swimlung = swimlung %>% filter(is.na(ptid) == FALSE)
-swimliver = read.csv("../Misc/liverswim.csv",stringsAsFactors = F)
+swimliver = read.csv("../../Misc/liverswim.csv",stringsAsFactors = F)
 swimliver$time = swimliver$time/365
 
-liverstatus = read.csv("../Misc/liverstatus.csv",stringsAsFactors = F)
+liverstatus = read.csv("../../Misc/liverstatus.csv",stringsAsFactors = F)
 liverstatus$last = liverstatus$last/365
 liverstatus = liverstatus %>% filter(is.na(ptid) == FALSE)
-lungstatus = read.csv("../Misc/lungstatus.csv",stringsAsFactors = F)
+lungstatus = read.csv("../../Misc/lungstatus.csv",stringsAsFactors = F)
 lungstatus$last = lungstatus$last/365
 lungstatus = lungstatus %>% filter(is.na(ptid) == FALSE)
 
-liverrecur2 = read.csv("../Misc/liverrecur2.csv",stringsAsFactors = F)
+liverrecur2 = read.csv("../../Misc/liverrecur2.csv",stringsAsFactors = F)
 liverrecur2$time = liverrecur2$time/365
 liverrecur2 = liverrecur2 %>% filter(is.na(ptid) == FALSE)
-lungrecur2 = read.csv("../Misc/lungrecur2.csv",stringsAsFactors = F)
+lungrecur2 = read.csv("../../Misc/lungrecur2.csv",stringsAsFactors = F)
 lungrecur2$time = lungrecur2$time/365
 lungrecur2 = lungrecur2 %>% filter(is.na(ptid) == FALSE)
 
