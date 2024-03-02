@@ -10,11 +10,12 @@ library(gridExtra)
 library(patchwork)
 library(cowplot)
 
+# Loading data ####
 
-file_ = 'compartments/healthy_cancer.RData'
-load(file = file_)
+load(file = 'compartments/healthy_cancer.RData')
 DefaultAssay(s_objs) = 'RNA'
 
+# Markers from doi: 10.1016/j.cell.2022.06.007 ####
 
 stress_md = c('BAG3','BLOC1S5-TXNDC5','CALU','DNAJB1','DUSP1','EGR1','FOS','FOSB','HIF1A','HSP90AA1','HSP90AB1','HSP90AB2P','HSP90AB3P',
               'HSP90B1','HSPA1A','HSPA1B','HSPA6','HSPB1','HSPH1','IER2','JUN','JUNB','NFKBIA','NFKBIZ','RGS2','SLC2A3','SOCS3','UBC',
