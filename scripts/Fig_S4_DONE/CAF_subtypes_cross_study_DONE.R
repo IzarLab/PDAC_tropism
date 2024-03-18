@@ -102,3 +102,5 @@ p_[[4]] = p_[[4]] + labs(y = 'Signature expression', x = '')+
                     stat_summary(fun = mean, geom ='point', size = 10, colour = 'black', shape = 95)
 
 ggsave('CAF_subtypes_cross_study.pdf', device = 'pdf', width = 24, height = 14, units = 'in', dpi = 600, plot = p_)
+
+

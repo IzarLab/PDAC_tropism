@@ -11,6 +11,7 @@ library(dbscan)
 library(xlsx)
 library(monocle3)
 library(parallel)
+library(viridis)
 
 # Loading data ####
 

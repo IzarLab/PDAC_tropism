@@ -1,8 +1,8 @@
 ---
 title: "Neoadjuvant 3-20-21"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup}
@@ -24,7 +24,6 @@ library(ggpubr)
 library(survminer)
 library(swimplot)
 library(scales)
-library(knitr)
 
 #Uploading data
 

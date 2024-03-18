@@ -1,4 +1,4 @@
-# This scripts carries out differential cell abundance analysis by Milo on myeloid compartment
+# This scripts carries out differential cell abundance analysis by Milo on malignant exocrine compartment
 
 library(ggplot2)
 library(miloR)
@@ -12,7 +12,7 @@ library(statmod)
 
 # Loading data ####
 
-load(file = 'Misc/Milo_DA_k30_d30_prop0.4_myeloid.RData')
+load(file = 'Misc/Milo_DA_k30_d30_prop0.4_cancer.RData')
 
 # Designing the test ####
 
@@ -45,7 +45,7 @@ da_results$cell_type = as.factor(da_results$cell_type)                          
 
 # Plotting ####
 
-pdf(file = 'Milo_myeloid.pdf', width = 10, height = 10)
+pdf(file = 'Milo_cancer.pdf', width = 10, height = 10)
 
 # setting colors
 
@@ -105,7 +105,7 @@ nh_graph_pl = plotNhoodGraphDA(x = milo_obj, milo_res = da_results,
               guides(size = guide_legend("Neighborhood size"))
 nh_graph_pl$layers[[1]]$aes_params$edge_width = 0
 
-# plotting single-cell UMAP
+# Plotting single-cell UMAP
 
 umap_pl = plotReducedDim(milo_obj, dimred = "UMAP", colour_by= ds_, text_by = "cell_type", text_size = 4, rasterise = F, point_alpha = 1, point_size = .4)+
           guides(color = guide_legend(title = ds_,
