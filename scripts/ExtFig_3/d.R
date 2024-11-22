@@ -27,7 +27,7 @@ pdac_ = subset(pdac_, cells = cells_)
 pdac_$first_type = droplevels(pdac_$first_type)
 pdac_$second_type = droplevels(pdac_$second_type)
 
-DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'Histology')+      # there are several umap reductions and this one is the default if default assay is rctd_fullfinal!
+DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'Histology')+      # there are several umap reductions and this one is the default as the initial default assay was rctd_fullfinal!
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'first_type')+
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'second_type')+
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'spot_class')
@@ -99,5 +99,5 @@ annotate(geom = 'text', x = c(1,2,3), y = max(dt_$score)+0.05, label = paste0('C
 annotate(geom = 'text', x = c(1,2,3), y = max(dt_$score)+0.01, label = paste0('Wilcoxon q = ',p_values), fontface = 'bold', size = 5)+
 scale_fill_manual(values = c('red','blue'))
 
-ggsave(filename = 'd.pdf', device = 'pdf', width = 14, height = 8, )
+ggsave(filename = 'b.pdf', device = 'pdf', width = 14, height = 8, )
 

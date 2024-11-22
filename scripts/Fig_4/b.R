@@ -27,7 +27,7 @@ pdac_ = subset(pdac_, cells = cells_)
 pdac_$first_type = droplevels(pdac_$first_type)
 pdac_$second_type = droplevels(pdac_$second_type)
 
-DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'Histology')+      # there are several umap reductions and this one is the default if default assay is rctd_fullfinal!
+DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'Histology')+      # there are several umap reductions and this one is the default as the initial default assay was rctd_fullfinal!
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'first_type')+
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'second_type')+
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'spot_class')
