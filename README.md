@@ -6,4 +6,5 @@ There is no specific installation guide other than installing common R or Python
 
 **Instructions for Use**<br>
 If all packages are installed correctly, the scripts should run without any issues in RStudio or the terminal using the Rscript command. Refer to ***Figures.xlsx*** table for further details. Each script is mnemonic and well-documented, clearly explaining the purpose of each code block. Also the following demo shows how to regenrate figure 1 as an example.
-[![Watch the video](https://img.youtube.com/vi/zvmdHKROiBA&ab_channel=MorCh/0.jpg)](https://www.youtube.com/watch?v=zvmdHKROiBA&ab_channel=MorCh)
+
+[![Video Thumbnail](https://img.youtube.com/vi/zvmdHKROiBA/0.jpg)](https://www.youtube.com/watch?v=zvmdHKROiBA)
