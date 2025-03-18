@@ -20,6 +20,7 @@ Att.:
      - install python packages listed in **j.ipynb**, **j.py** and also install _circos_ (https://circos.ca/).  
      - run cells in **i.ipynb**. It should create **output** directory inside **Fig_4** with necessary files for generating circos plot as well as, probably, the circos plot. If the script throws _FileNotFoundError_, then open a new Terminal session, redirect it to **output** and type in `circos` that should generate **circos.svg** inside **output** folder.  
    - **_Hard way_**: follow their instructions on ContactTracing's GitHub page (https://github.com/LaughneyLab/ContactTracing_tutorial) and replace their jupyter notebook (tutorial.ipynb) and python script (python/contactTracing_library.py) with **j.ipynb** and **j.py** respectively.
+3. For running Echidna, refer to their GitHub repository: https://github.com/azizilab/echidna
 
 The following video demo shows how to regenrate figure 1 as an example.<br><br>
 
