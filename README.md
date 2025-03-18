@@ -2,7 +2,7 @@
 All scripts were executed using R version 4.4.1 (2024-06-14) and Python 3.12.4. Details about package versions are provided in the paper.
 
 **Installation Guide**<br>
-There is no specific installation guide other than installing common R or Python packages. Each package should be installed according to the instructions provided by its respective developers. The data required to run each script is available on GEO, with the accession codes provided in the paper. If all packages are installed correctly, the scripts should run without any issues in RStudio or the terminal using the Rscript command. Each script is well-documented, clearly explaining the purpose of each code block.
+There is no specific installation guide other than installing common R or Python packages. Each package should be installed according to the instructions provided by its respective developers. The data required to run each script is available on GEO, with the accession codes provided in the paper. If all packages are installed correctly, the scripts should run without any issues in RStudio or Terminal using the Rscript command. Each script is well-documented and clearly explains the purpose of each code block.
 
 **Instructions for Use**<br>
 
