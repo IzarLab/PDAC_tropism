@@ -1,4 +1,5 @@
-# This script plots FGA and TMB of primary PDAC given SSM, CNV and SV mutations of MSK-MET data taken from: https://zenodo.org/records/5801902
+# This script plots Extended Data Fig. 7b-o; it plots FGA and TMB of primary PDAC given SSV, CNV and SV
+# mutations of MSK-MET data taken from: https://zenodo.org/records/5801902.
 # Downloaded files are data_clinical_sample.txt, data_mutations.txt, data_cna.txt and data_sv.txt
 
 library(ggplot2)

@@ -1,4 +1,5 @@
-# This script plots types of SSV for primary PDAC tumors in the MSK-MET data taken from: https://zenodo.org/records/5801902
+# This script plots Extended Data Fig. 7a; it plots types of SSV for primary PDAC tumors in the MSK-MET
+# data taken from: https://zenodo.org/records/5801902.
 # Downloaded files are data_clinical_sample.txt and data_mutations.txt
 
 library(ggplot2)
@@ -86,7 +87,7 @@ freq_$mutation_type = factor(x = freq_$mutation_type, levels = c("Missense","Fra
 
 # Plotting ####
 
-pdf(file = 'SSM.pdf', width = 20, height = 12)
+pdf(file = 'a.pdf', width = 20, height = 12)
 
 # labels
 freq_$label = NA
