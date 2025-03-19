@@ -1,4 +1,4 @@
-# This scripts generates a heatmap of canonical markers of CAF subpopulations
+# This scripts plots Fig. 8b; it generates a heatmap of canonical markers of CAF subpopulations
 
 library(Seurat)
 library(SeuratObject)

@@ -1,4 +1,4 @@
-# This scripts carries out cell trajectory analysis on CAF compartment
+# This scripts plots Fig. 8a; it carries out cell trajectory analysis on CAF compartment
 
 library(ggplot2)
 library(viridis)

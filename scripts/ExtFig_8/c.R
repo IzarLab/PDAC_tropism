@@ -1,4 +1,4 @@
-# This scripts plots overlap between cross-study CAF subtypes
+# This scripts plots Fig. 8c; it plots overlap between cross-study CAF subtypes
 
 library(Seurat)
 library(SeuratObject)

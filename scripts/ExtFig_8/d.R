@@ -1,4 +1,4 @@
-# This script carries out differential cell abundance analysis by Milo on CAF compartment
+# This scripts plots Fig. 8d; it carries out differential cell abundance analysis by Milo on CAF compartment
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")

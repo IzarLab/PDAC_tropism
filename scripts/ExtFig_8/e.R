@@ -1,4 +1,5 @@
-# This scripts generates UMAP and dot plots of immune compartment
+# This scripts plots Fig. 8e; it generates dot plot showing the expression of ligands to exhaustion receptors
+# within the immune compartment.
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")
