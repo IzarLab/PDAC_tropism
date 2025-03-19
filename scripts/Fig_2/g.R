@@ -1,4 +1,4 @@
-# This script plots CNV heatmap for all patients in cancer compartment
+# This script plots Fig. 2g (CNV heatmap for all patients in cancer compartment).
 
 library(ggplot2)
 library(grid)

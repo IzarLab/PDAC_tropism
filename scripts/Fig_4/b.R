@@ -1,9 +1,10 @@
-# This script takes adult matched primary and metastatic PDACs in liver and lymphnode (PMID: 39294496) and checks the enrichment of PDAC-liver and PDAC-lung signatures in them.
+# This script plots Fig. 4b; it takes adult matched primary and metastatic PDACs in liver and lymphnode (PMID: 39294496)
+# and checks the enrichment of PDAC-liver and PDAC-lung recurrence signatures in them.
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")
 library(SeuratObject)
-library(SeuratDisk)# Did you 'brew install hdf5'?
+library(SeuratDisk)     # Did you 'brew install hdf5'?
 library(SeuratWrappers)
 library(rstatix)
 library(ggplot2)
@@ -31,8 +32,6 @@ DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'Histology')+   
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'first_type')+
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'second_type')+
 DimPlot(object = pdac_, reduction = 'umap.ischia14', group.by = 'spot_class')
-
-# ggsave(filename = 'landscape.pdf', device = 'pdf', width = 15, height = 15)
 
 # Signature score ####
 message('signature score')

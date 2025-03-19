@@ -1,9 +1,9 @@
-# This script shows the average expression of PDAC recurrence signatures in exocrine compartment.
+# This script plots Fig. 5j; it shows the average expression of PDAC-recurrence signatures in exocrine compartment.
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")
 library(SeuratObject)
-library(SeuratDisk)# Did you 'brew install hdf5'?
+library(SeuratDisk)     # Did you 'brew install hdf5'?
 library(MatrixGenerics)
 library(rstatix)
 library(ggplot2)

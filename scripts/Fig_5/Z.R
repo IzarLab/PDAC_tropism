@@ -1,4 +1,5 @@
 # This scripts generates a dot plot of PanIN and ductal signatures' score par patient. These two are not comparable.
+# This script does not correspond to any figure within the paper but the rebuttal for reviewers.
 # rows: signatures
 # column: patients
 # dot size: fraction of cells significantly expressing a signature
@@ -45,16 +46,15 @@ ductal_ = c('SLC4A4','KCNJ15','CADPS','ADAMTS9-AS2','BICC1','PDE3A','PCDH9','CFT
 if(!file.exists('compartments/exocrine_imputed.RData'))
 {
   load(file = 'compartments/exocrine.RData')
-  s_objs = subset(s_objs, subset = cell_type %in% c('precursor lesion','ductal','ductal EMT'))     # all cancer cells except mitotic and NLP
+  s_objs = subset(s_objs, subset = cell_type %in% c('PanIN','ductal/ductal-like','low-grade PanIN'))      # only ductal/ductal-like and PanIN subpopulations are required
   s_objs$cell_type = as.character(s_objs$cell_type)
-  s_objs$cell_type[s_objs$cell_type %in% c('precursor lesion','ductal EMT')] = 'PanIN'
-  s_objs$cell_type[s_objs$cell_type %in% c('ductal')] = 'ductal/ductal-like'
+  s_objs$cell_type[s_objs$cell_type %in% c('PanIN','low-grade PanIN')] = 'PanIN'
   annot_ = s_objs@meta.data
   
   # Imputation ####
   
   s_objs = RunALRA(s_objs, assay = 'RNA', k.only = TRUE)      # only computes optimal k WITHOUT performing ALRA; by default it uses normalized data in slot data
-  s_objs = RunALRA(s_objs, assay = 'RNA')                   # runs ALRA with the chosen k
+  s_objs = RunALRA(s_objs, assay = 'RNA')                     # runs ALRA with the chosen k
   s_objs = as.matrix(s_objs[['alra']]@data)
   save(s_objs, annot_, file = 'compartments/exocrine_imputed.RData')
 }else

@@ -1,121 +1,89 @@
-# This script carries out differential cell abundance analysis by Milo on CAF compartment
+# This script plots Extended Data Fig. 6d; it plots KM curve for OS of MSK-MET data taken from: https://zenodo.org/records/5801902
+# Downloaded files are data_clinical_sample.txt and data_clinical_patient.txt
 
-library(Seurat)
-options(Seurat.object.assay.version = "v3")
 library(ggplot2)
-library(miloR)
-library(SingleCellExperiment)
-library(scater)
-library(dplyr)
+library(ggrepel)
+library(gridExtra)
 library(patchwork)
-library(statmod)
-set.seed(42)
+library(cowplot)
+library(ggplot2)
+library(survival)
+library(survminer)
 
-# Loading Milo data ####
+# Reading in data ####
 
-load(file = 'Misc/Milo_DA_k30_d30_prop0.4_CAF.RData')
+# sample data
+dt_smpl = read.delim('Misc/data_clinical_sample.txt', header = T, comment.char = '#', as.is = T, check.names = F, sep = '\t')
+rownames(dt_smpl) = dt_smpl$PATIENT_ID
 
-# DEA (differentially enriched abundance) test ####
-
-# test design
-
-dsgn_ = data.frame(sample = colData(milo_obj)$"orig.ident",       # sample (replicate)
-                   condition = colData(milo_obj)$"condition",     # condition
-                   batch = colData(milo_obj)$"orig.ident",
-                   stringsAsFactors = T)
-dsgn_ = distinct(dsgn_)                                           # removing duplicated records
-rownames(dsgn_) = dsgn_$sample
-
-# test
-
-ds_ = 'condition'
-fml_ = as.formula(paste0('~',ds_))
-da_results = testNhoods(milo_obj,
-                        design.df = dsgn_,          # design data frame
-                        design = fml_)
-da_results$nh_size = colSums(nhoods(milo_obj))      # I added this line to add nhood sizes to the da_results; da_result is not sorted by LFc/p-value
-
-# cell type assignment to each neighborhood
-
-da_results = annotateNhoods(milo_obj, da_results, coldata_col = "cell_type")                                  # it labels a neighborhood by the most abundant cell type in it (cell_type_fraction)
-
-da_results$cell_type = ifelse(da_results$cell_type_fraction < .65, "Mixed", da_results$cell_type)            # if the fraction of the most abundant cell type in a given neighborhood is less than cutoff,
-                                                                                                             # that neighborhood is not homogeneous
-da_results = da_results[da_results$cell_type != 'Mixed',]
-
-# Plotting ####
-
-pdf(file = 'd.pdf', width = 12, height = 7)
-
-# setting colors
-
-max_l2fc = max(abs(da_results$logFC))
-
-pos_cols = colorRampPalette(colors = c('skyblue','blue4'))(10)
-pos_ = seq(from = 0, to = max_l2fc, length.out = 10)     # each value if pos_ is the lower bound of each color interval
-names(pos_cols) = pos_
-
-neg_cols = colorRampPalette(colors = c('red4','pink'))(10)
-neg_ = seq(from = -max_l2fc, to = 0, length.out = 10)     # each value if neg_ is the upper bound of each color interval
-names(neg_cols) = neg_
-
-da_results$cols = NA
-for(r_ in 1:nrow(da_results))
+# adding metastatic sites as a new column
+cols_ = colnames(dt_smpl)[grepl(pattern = 'DMETS_DX_', x = colnames(dt_smpl))][-1]      # DMETS_DX_UNSPECIFIED adds outliers must be removed
+dt_smpl$MET_SITE = NA
+for(i_ in 1:nrow(dt_smpl))
 {
-  l2fc_ = da_results$logFC[r_]
-  if(0 <= l2fc_)
-  {
-    da_results$cols[r_] = pos_cols[as.character(max(pos_[pos_ <= l2fc_ ]))]
-  }else
-  {
-    da_results$cols[r_] = neg_cols[as.character(min(neg_[ l2fc_ <= neg_ ]))]
-  }
+  dt_smpl$MET_SITE[i_] = paste0(cols_[dt_smpl[i_,cols_] %in% 'Yes'], collapse = ',')
 }
-da_results$cols[0.1 < da_results$PValue] = 'grey88'
-da_results = da_results[order(da_results$cols, decreasing = T),]
+dt_smpl = dt_smpl[which(dt_smpl$MET_SITE != ''), ]
 
-# plotting DEA per cell type
+# patient data
 
-p_ =  ggplot(data = da_results, aes(x = logFC, y = cell_type))+coord_flip()+
-      theme(plot.title = element_text(hjust = .5, face = 'bold', family = 'Helvetica', size = 20),
-            plot.background = element_blank(),panel.background = element_blank(),
-            panel.grid = element_blank(), panel.grid.major.y = element_line(linewidth = .2, color = 'grey80'),
-            panel.border = element_blank(),axis.line.x = element_line(color = 'black', linewidth = .5),
-            axis.title = element_text(size = 25, hjust = .5, face = 'bold', family = 'Helvetica'),
-            axis.text = element_text(face = 'bold', size = 20, family = 'Helvetica', color = 'black'),
-            axis.text.x = element_text(face = 'bold', size = 20, family = 'Helvetica', color = 'black', angle = -40, hjust = 0),
-            legend.text = element_text(family = 'Helvetica', size = 20, face = 'bold'),
-            legend.title = element_text(family = 'Helvetica', size = 20, face = 'bold'),
-            axis.line.y = element_line(color = 'black', linewidth = .5))+
-      labs(title =  paste0('Cell type DA (',ds_,')'), x = 'L2FC', y = NULL)+
-      geom_jitter(height = .25, aes(size = nh_size), color = da_results$cols)+
-      geom_violin(scale = 'width', alpha = 0)+
-      geom_vline(xintercept = c(-log2(1.5),log2(1.5)), linewidth = .5, linetype = 'dashed')
-plot(p_)
+dt_pnt = read.delim('Misc/data_clinical_patient.txt', header = T, comment.char = '#', as.is = T, check.names = F, sep = '\t')
+rownames(dt_pnt) = dt_pnt$PATIENT_ID
 
-# plotting neighborhood graph
+# start and end time for DFS
+for(i_ in 1:nrow(dt_pnt))
+{
+  dt_pnt$start[i_] = min(dt_pnt$AGE_AT_SEQUENCING[i_], dt_pnt$AGE_AT_SURGERY[i_], na.rm = T)      # sequencing could be from blood sample at the time of diagnosis for ctDNA or germline WGS 
+  dt_pnt$end[i_] = min(dt_pnt$AGE_AT_EVIDENCE_OF_METS[i_], dt_pnt$AGE_AT_DEATH[i_], dt_pnt$AGE_AT_LAST_CONTACT[i_], na.rm = T)
+  dt_pnt$DFS_MONTH[i_] = dt_pnt$end[i_] - dt_pnt$start[i_]
+  dt_pnt$DFS_STATUS[i_] = if(!is.na(dt_pnt$AGE_AT_EVIDENCE_OF_METS[i_])){ 1 }else{ 0 }
+}
+dt_pnt = dt_pnt[!is.infinite(dt_pnt$start) & !is.infinite(dt_pnt$end) & (0 <= dt_pnt$DFS_MONTH),]
 
-milo_obj = buildNhoodGraph(milo_obj)      # it builds a graph of neighborhoods with edges representing number of shared neighbors
+# initial metastatic site
 
-t_ = paste(levels(dsgn_$condition))
-nh_graph_pl = plotNhoodGraphDA(x = milo_obj, milo_res = da_results,
-                               alpha = 1,
-                               size_range = c(0.4, 5))+
-              theme(plot.title = element_text(hjust = 0.5))+
-              labs(title = t_)+
-              guides(size = guide_legend("Neighborhood size"))
-nh_graph_pl$layers[[1]]$aes_params$edge_width = 0
+dt_smpl = dt_smpl[dt_smpl$MET_SITE_COUNT == 1,]     # only one metastatic site during the follow-up time; among MET_COUNT and MET_SITE_COUNT the latter corresponds to number of Yes's
+initial_met_lung = dt_smpl[dt_smpl$MET_SITE %in% 'DMETS_DX_LUNG',]
+initial_met_lung_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_lung$PATIENT_ID,]
 
-# plotting single-cell UMAP
+initial_met_others = dt_smpl[!dt_smpl$MET_SITE %in% c('DMETS_DX_LUNG','DMETS_DX_LIVER','DMETS_DX_DIST_LN'),]
+initial_met_others_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_others$PATIENT_ID,]
 
+# Plotting KM curve ####
 
-umap_pl = plotReducedDim(milo_obj, dimred = "UMAP", colour_by= ds_, text_by = "cell_type", text_size = 4, rasterise = F, point_alpha = 1, point_size = .4)+
-          guides(color = guide_legend(title = ds_,
-          title.theme = element_text(face = 'bold', size = 10),
-          label.theme = element_text(face = 'bold', size = 10),
-          override.aes = list(size = 5)))
+# preparing data
 
-q_ = umap_pl + nh_graph_pl + plot_layout(guides = "collect")
-plot(q_)
+dt_ = data.frame(patients   = c(initial_met_lung_os$PATIENT_ID,
+                                initial_met_others_os$PATIENT_ID),
+                 
+                 DFS_MONTH  = c(initial_met_lung_os$DFS_MONTH,
+                                initial_met_others_os$DFS_MONTH),
+                 
+                 DFS_STATUS = c(initial_met_lung_os$DFS_STATUS,      # it is required to use a numerical variable to be able to use ggsurvplot, as it does not work with factor
+                                initial_met_others_os$DFS_STATUS),
+                 
+                 initial_met = rep(x = c('lung',
+                                         'others'),
+                                   times = c(nrow(initial_met_lung_os),
+                                             nrow(initial_met_others_os))),
+                 stringsAsFactors = T)
 
+# create a Survival Object
+
+surv_object = Surv(time = dt_$DFS_MONTH, event = dt_$DFS_STATUS)
+
+# fit a Kaplan-Meier Model
+
+km_fit = survfit(surv_object ~ initial_met, data = dt_)
+
+# plotting
+
+pdf(file = 'd.pdf', width = 7.5, height = 9)
+ggsurvplot(km_fit, data = dt_,
+           pval = T, pval.method = T, conf.int = T,
+           risk.table = T,
+           palette = rev(c('red','blue')),
+           xlab = "Time in Months", 
+           ylab = "DFS Probability", 
+           title = "Kaplan-Meier Curve of DFS")
 graphics.off()

@@ -1,6 +1,6 @@
-# This script finds top n informative genes from PDAC recurrence signatures that separate out lung and liver single cells
+# This script plots Extended Data Fig. 3b-c; it finds top n informative genes from PDAC-recurrence signatures that separate out lung and liver single cells
 # in healthy adult lung-liver single-cell data. To find top n, it runs PCA on each signature and extracts genes with positive-direction rotations.
-# This scripts is used with Fig_3g.R and Fig_3h.R scripts to check the informativeness of top n genes for Moffitt and MET500 datasets.
+# This scripts is used with Fig_4/a.R and Fig_4/g-h.R scripts to check the informativeness of top n genes for MET500 and CCLE-MetMap500 datasets.
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")

@@ -1,4 +1,4 @@
-# This script generates a heatmap of canonical markers of macrophage subtypes
+# This script plots Fog. 6e; it generates a heatmap of canonical markers of macrophage subtypes.
 
 library(Seurat)
 library(SeuratObject)

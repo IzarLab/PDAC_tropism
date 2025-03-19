@@ -1,4 +1,4 @@
-# This script generates a dot plot of cll-cell interactions called by CellPhoneDB for immune compartment
+# This script plots Fig. 6g; it generates a dot plot of cll-cell interactions called by CellPhoneDB for immune compartment.
 
 library(ggplot2)
 library(gridExtra)

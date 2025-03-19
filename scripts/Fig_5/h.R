@@ -1,4 +1,4 @@
-# This script carries out pseudo-time KRAS/ROS signature expression analysis in exocrine compartment
+# This script plots Fig. 5h; it carries out pseudo-time KRAS/ROS signature expression analysis in exocrine compartment
 
 library(ggplot2)
 library(viridis)
@@ -17,8 +17,8 @@ load('compartments/exocrine_differentiating-cancer.RData')
 
 # breaking the loop between cancer and ADM
 
-cells_ = read.delim('Misc/loop_cells.txt', header = F, quote = '')$V1
-s_objs = subset(s_objs, cells = colnames(s_objs)[!colnames(s_objs) %in% cells_])
+cells_ = read.delim('Misc/loop_cells.txt', header = F, quote = '')$V1                 # bridging cells
+s_objs = subset(s_objs, cells = colnames(s_objs)[!colnames(s_objs) %in% cells_])      # removing bridging cells
 
 # conversion
 

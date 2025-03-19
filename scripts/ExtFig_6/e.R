@@ -1,48 +1,86 @@
-# This scripts generates UMAP and dot plots of immune compartment
+# This script plots Extended Data Fig. 6e; it plots KM curve for OS of MSK-MET data taken from: https://zenodo.org/records/5801902
+# Downloaded files are data_clinical_sample.txt and data_clinical_patient.txt
 
-library(Seurat)
-options(Seurat.object.assay.version = "v3")
-library(SeuratObject)
-library(SeuratWrappers)
 library(ggplot2)
 library(ggrepel)
 library(gridExtra)
 library(patchwork)
 library(cowplot)
+library(ggplot2)
+library(survival)
+library(survminer)
 
-# Loading data ####
+# Reading in data ####
 
-load('compartments/healthy_cancer.RData')
+# sample data
 
-# UMAP of compartment ####
+dt_smpl = read.delim('Misc/data_clinical_sample.txt', header = T, comment.char = '#', as.is = T, check.names = F, sep = '\t')
+rownames(dt_smpl) = dt_smpl$PATIENT_ID
 
-pdf('e.pdf', width = 16, height = 8)
+# adding metastatic sites as a new column
+cols_ = colnames(dt_smpl)[grepl(pattern = 'DMETS_DX_', x = colnames(dt_smpl))][-1]      # DMETS_DX_UNSPECIFIED adds outliers must be removed
+dt_smpl$MET_SITE = NA
+for(i_ in 1:nrow(dt_smpl))
+{
+  dt_smpl$MET_SITE[i_] = paste0(cols_[dt_smpl[i_,cols_] %in% 'Yes'], collapse = ',')
+}
+dt_smpl = dt_smpl[which(dt_smpl$MET_SITE != ''), ]
 
-# Dot plots ####
+# patient data
 
-# exhaustion receptors' ligands
+dt_pnt = read.delim('Misc/data_clinical_patient.txt', header = T, comment.char = '#', as.is = T, check.names = F, sep = '\t')
+rownames(dt_pnt) = dt_pnt$PATIENT_ID
 
-s_ = subset(s_objs, subset = cell_type %in% c('basal-like','Classical','progenitor','differentiating ductal','E2F Targets (S)','G2-M','ciliated','neural-like progenitor',
-                                               'CD197+ cDC','CD1c+ cDC','CD141+CD226+ cDC','pDC',
-                                              'M1-like','M2-like','M2a-like','M2c-like','M2d-like',
-                                              'mast','monocyte'))
-s_$cell_type = factor(x = s_$cell_type, levels = c('basal-like','Classical','progenitor','differentiating ductal','E2F Targets (S)','G2-M','ciliated','neural-like progenitor',
-                                                   'CD197+ cDC','CD1c+ cDC','CD141+CD226+ cDC','pDC',
-                                                   'M1-like','M2-like','M2a-like','M2c-like','M2d-like',
-                                                   'mast','monocyte'))
-Idents(s_) = s_$cell_type
-DotPlot(object = s_, features = c('LGALS9',
-                                  'CD80','CD86',
-                                  'NECTIN3','NECTIN2','PVR',
-                                  'PDCD1LG2','CD274'),
-        scale = F,
-        dot.min = 0.05, dot.scale = 15,
-        scale.by = 'size',
-        cols = c('red','blue'),
-        cluster.idents = F, )+
-  theme(axis.text.x = element_text(size = 20, angle = -25, hjust = .1, family = 'Helvetica', face = 'bold'),
-        axis.text = element_text(size = 20, face = 'bold', family = 'Helvetica'),
-        legend.text = element_text(face = 'bold',family = 'Helvetica', size = 20), legend.title = element_text(family = 'Helvetica', face = 'bold', size = 20, vjust = 1),legend.position = 'right')+
-  labs(x = NULL, y = NULL)+coord_flip()
+# initial metastatic site
 
+dt_smpl = dt_smpl[dt_smpl$MET_SITE_COUNT == 1,]     # only one metastatic site during the follow-up time; among MET_COUNT and MET_SITE_COUNT the latter corresponds to number of Yes's
+initial_met_liver = dt_smpl[dt_smpl$MET_SITE %in% 'DMETS_DX_LIVER',]
+initial_met_liver_os = dt_pnt[initial_met_liver$PATIENT_ID,]
+
+initial_met_lung = dt_smpl[dt_smpl$MET_SITE %in% 'DMETS_DX_LUNG',]
+initial_met_lung_os = dt_pnt[initial_met_lung$PATIENT_ID,]
+
+# Plotting KM curve ####
+
+# preparing data
+
+dt_ = data.frame(patients   = c(initial_met_liver$PATIENT_ID,
+                                initial_met_lung$PATIENT_ID),
+                 
+                 OS_MONTHS  = c(initial_met_liver_os$OS_MONTHS,
+                                initial_met_lung_os$OS_MONTHS),
+                 
+                 OS_STATUS = c(initial_met_liver_os$OS_STATUS,
+                               initial_met_lung_os$OS_STATUS),
+                 
+                 age_death = c(initial_met_liver_os$AGE_AT_DEATH,
+                               initial_met_lung_os$AGE_AT_DEATH),
+                 
+                 initial_met = rep(x = c('liver',
+                                         'lung'),
+                                   times = c(nrow(initial_met_liver),
+                                             nrow(initial_met_lung))),
+                 stringsAsFactors = T)
+dt_ = dt_[! is.na(dt_$OS_MONTHS),]
+dt_$OS_STATUS_code = 0      # 0: living; it is required to use a numerical variable to be able to use ggsurvplot, as it does not work with factor
+dt_$OS_STATUS_code[dt_$OS_STATUS %in% '1:DECEASED'] = 1
+
+# create a Survival Object
+
+surv_object = Surv(time = dt_$OS_MONTHS, event = dt_$OS_STATUS_code)
+
+# fit a Kaplan-Meier Model
+
+km_fit = survfit(surv_object ~ initial_met, data = dt_)
+
+# plotting
+
+pdf(file = 'e.pdf', width = 7.5, height = 9)
+ggsurvplot(km_fit, data = dt_,
+           pval = T, pval.method = T, conf.int = T,
+           risk.table = T,
+           palette = c('red','blue'),
+           xlab = "Time in Months", 
+           ylab = "OS Probability", 
+           title = "Kaplan-Meier Curve of OS")
 graphics.off()

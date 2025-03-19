@@ -1,4 +1,4 @@
-# This script plots Extended Data Fig. 6b; it plots KM curve for OS of MSK-MET data taken from: https://zenodo.org/records/5801902
+# This script plots Extended Data Fig. 6f; it plots KM curve for OS of MSK-MET data taken from: https://zenodo.org/records/5801902
 # Downloaded files are data_clinical_sample.txt and data_clinical_patient.txt
 
 library(ggplot2)
@@ -47,26 +47,26 @@ dt_smpl = dt_smpl[dt_smpl$MET_SITE_COUNT == 1,]     # only one metastatic site d
 initial_met_liver = dt_smpl[dt_smpl$MET_SITE %in% 'DMETS_DX_LIVER',]
 initial_met_liver_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_liver$PATIENT_ID,]
 
-initial_met_others = dt_smpl[!dt_smpl$MET_SITE %in% c('DMETS_DX_LIVER','DMETS_DX_LUNG','DMETS_DX_DIST_LN'),]
-initial_met_others_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_others$PATIENT_ID,]
+initial_met_lung = dt_smpl[dt_smpl$MET_SITE %in% 'DMETS_DX_LUNG',]
+initial_met_lung_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_lung$PATIENT_ID,]
 
 # Plotting KM curve ####
 
 # preparing data
 
 dt_ = data.frame(patients   = c(initial_met_liver_os$PATIENT_ID,
-                                initial_met_others_os$PATIENT_ID),
+                                initial_met_lung_os$PATIENT_ID),
                  
                  DFS_MONTH  = c(initial_met_liver_os$DFS_MONTH,
-                                initial_met_others_os$DFS_MONTH),
+                                initial_met_lung_os$DFS_MONTH),
                  
                  DFS_STATUS = c(initial_met_liver_os$DFS_STATUS,      # it is required to use a numerical variable to be able to use ggsurvplot, as it does not work with factor
-                               initial_met_others_os$DFS_STATUS),
+                                initial_met_lung_os$DFS_STATUS),
                  
                  initial_met = rep(x = c('liver',
-                                         'other'),
+                                         'lung'),
                                    times = c(nrow(initial_met_liver_os),
-                                             nrow(initial_met_others_os))),
+                                             nrow(initial_met_lung_os))),
                  stringsAsFactors = T)
 
 # create a Survival Object
@@ -79,7 +79,7 @@ km_fit = survfit(surv_object ~ initial_met, data = dt_)
 
 # plotting
 
-pdf(file = 'b.pdf', width = 7.5, height = 9)
+pdf(file = 'f.pdf', width = 7.5, height = 9)
 ggsurvplot(km_fit, data = dt_,
            pval = T, pval.method = T, conf.int = T,
            risk.table = T,

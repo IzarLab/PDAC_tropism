@@ -1,4 +1,4 @@
-# This script shows how clustering/annotation is done in nonmalignant exocrine compartment.
+# This script plots Fig. 5b; it shows how clustering/annotation is done in nonmalignant exocrine compartment.
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")

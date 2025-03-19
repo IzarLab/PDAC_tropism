@@ -1,4 +1,4 @@
-# This script generates dot plot of malignant program distribution in PDAC subtypes. Misc/malignant_programs_cancer.RData contains:
+# This script plots Extended Data Fig. 3a; it generates dot plot of malignant program distribution in PDAC subtypes.
 # The algorithm for computing signature score per cell population is given in Fig_5/i.R script.
 
 library(ggplot2)
@@ -90,7 +90,8 @@ for(sgn_ in unique(dt_$program))
   liv_scores = dt_$score[dt_$program %in% sgn_ & dt_$condition %in% 'liver']
   lng_scores = dt_$score[dt_$program %in% sgn_ & dt_$condition %in% 'lung']
   if(length(liv_scores) < 4 | length(lng_scores) < 4){ cat('not possible for ',sgn_,'\n'); next() }
-  p_val[sgn_] = wilcox.test(x = liv_scores, y = lng_scores, alternative = 'two.sided', )$p.value
+  p_val[sgn_] = wilcox.test(x = liv_scores, y = lng_scores, alternative = 'two.sided', exact = F)$p.value
 }
-print(sort(p_val[p_val <= 0.1]))
+p_val = p_val[p_val <= 0.01]
+if(0 < length(p_val)){ print(sort(p_val)) }
 

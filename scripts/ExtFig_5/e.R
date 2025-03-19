@@ -1,4 +1,5 @@
-# This script plots Fig. 4a; it computes single-sample gene set enrichment (ssGSE) scores of PDAC-recurrence signatures in metastases provided by MET500's paper.
+# This script plots Extended Data Fig. 5e; it computes single-sample gene set enrichment (ssGSE) scores of
+# PDAC-recurrence signatures in metastases provided by MET500's paper.
 # MET500 cohort is bulk RNA-seq gene expression data of 20 metastatic (not primary!) cancer types, including PDAC.
 
 library(Seurat)
@@ -24,15 +25,20 @@ load(file = 'Misc/merged_human_adult_lung_liver_processed.RData')
 
 # reading in liver/lung met PDAC signatures
 
-pdac_lung_markers = read.delim('Misc/cell_types_markers_main_subtypes_lung.tsv', header = T, sep = '\t')
-pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$cluster %in% 'all',]
-pdac_lung_markers$gene = trimws(pdac_lung_markers$gene)
-pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$gene %in% rownames(lng_liv),]
+genes_remove = read.table(file = 'Misc/gdx/GDX_gene.tsv', header = T, sep = '\t', quote = "", as.is = T, check.names = F)
+rownames(genes_remove) = genes_remove$gene
 
 pdac_liver_markers = read.delim('Misc/cell_types_markers_main_subtypes_liver.tsv', header = T, sep = '\t')
 pdac_liver_markers = pdac_liver_markers[pdac_liver_markers$cluster %in% 'all',]
 pdac_liver_markers$gene = trimws(pdac_liver_markers$gene)
 pdac_liver_markers = pdac_liver_markers[pdac_liver_markers$gene %in% rownames(lng_liv),]
+pdac_liver_markers = pdac_liver_markers[!pdac_liver_markers$gene %in% rownames(genes_remove),]
+
+pdac_lung_markers = read.delim('Misc/cell_types_markers_main_subtypes_lung.tsv', header = T, sep = '\t')
+pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$cluster %in% 'all',]
+pdac_lung_markers$gene = trimws(pdac_lung_markers$gene)
+pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$gene %in% rownames(lng_liv),]
+pdac_lung_markers = pdac_lung_markers[!pdac_lung_markers$gene %in% rownames(genes_remove),]
 
 # gene scores (loadings)
 
@@ -42,11 +48,11 @@ mat_ = t(as.matrix(lng_liv[["RNA"]]@data[c(liv_sig, lng_sig),]))
 
 cl_ = makeCluster(getOption("cl.cores", 2))
 pcs_ = parLapply(X = list(liver = liv_sig, lung = lng_sig), fun = function(sig_, m_)
-                                                                  {
-                                                                    library(parallel)
-                                                                    library(doParallel)
-                                                                    return(prcomp(x = m_[,sig_], rank. = 2))
-                                                                  }, m_ = mat_, cl = cl_)
+{
+  library(parallel)
+  library(doParallel)
+  return(prcomp(x = m_[,sig_], rank. = 2))
+}, m_ = mat_, cl = cl_)
 stopCluster(cl_)
 
 loadings_lng = sort(pcs_$lung$rotation[,"PC1"], decreasing = T)
@@ -104,7 +110,7 @@ for(s_ in names(d_))
 
 # plotting and testing by Wilcoxon rank-sum test
 
-pdf(file = 'a.pdf', width = 7.5, height = 7.5, fonts = 'Helvetica')
+pdf(file = 'e.pdf', width = 7.5, height = 7.5, fonts = 'Helvetica')
 
 # scaling between 0-1
 
@@ -122,12 +128,13 @@ rslt_$metastases = factor(x = rslt_$metastases, levels = c('lung','liver'))
 # plotting
 
 p_ =  ggplot(data = rslt_, aes(x = signature, y = score, fill = metastases))+
-      theme(panel.grid.minor = element_blank(), panel.grid.major.y = element_line(color = 'black'), axis.line = element_line(color = 'black'), panel.background = element_blank())+
-      geom_boxplot()+
-      geom_jitter(position = position_dodge(.75), color = "black", alpha = .7, size = 1)+
-      scale_fill_manual(values = c('blue','red'))+
-      annotate(geom = 'text', x = c(1,2), y = c(1.02,1.02), label = paste0('Cohen\'s d = ',d_))+
-      stat_compare_means(method = 'wilcox.test', label.y = max(rslt_$score)+0.05, paired = F, method.args = list(alternative = 'two.sided'))      # = wilcox.test(x = a_, y = b_,  paired = FALSE, alternative = "two.sided")$p.value
+  theme(panel.grid.minor = element_blank(), panel.grid.major.y = element_line(color = 'black'), axis.line = element_line(color = 'black'), panel.background = element_blank())+
+  geom_boxplot()+
+  stat_summary(fun = median, position = position_dodge(.75), geom ='point', size = 15, colour = "white", shape = 95)+
+  # geom_jitter(position = position_dodge(.75), color = "black", alpha = .7, size = 1)+
+  scale_fill_manual(values = c('blue','red'))+
+  annotate(geom = 'text', x = c(1,2), y = c(1.02,1.02), label = paste0('Cohen\'s d = ',d_))+
+  stat_compare_means(method = 'wilcox.test', label.y = max(rslt_$score)+0.05, paired = F, method.args = list(alternative = 'two.sided'))      # = wilcox.test(x = a_, y = b_,  paired = FALSE, alternative = "two.sided")$p.value
 plot(p_)
 graphics.off()
 

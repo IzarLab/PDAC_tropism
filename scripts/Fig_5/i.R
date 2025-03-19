@@ -1,4 +1,4 @@
-# This scripts generates a dot plot of canonical pathways of exocrine compartment
+# This scripts plots Fig. 5i; it generates a dot plot of canonical pathways of exocrine compartment.
 
 library(ggplot2)
 library(gridExtra)

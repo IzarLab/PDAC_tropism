@@ -1,4 +1,4 @@
-# This script plots CNV heatmap and UMAP for P10 (PN14 in Supplementary Table 1) patient
+# This script plots Fig. 2b and e (CNV heatmap and UMAP for P10). P10 refers to patient PN14 in the Supplementary Table 1.
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")

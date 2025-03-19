@@ -1,4 +1,4 @@
-# This scripts carries out differential cell abundance analysis by Milo on malignant exocrine compartment
+# This scripts plots Fig. 3b; it carries out differential cell abundance analysis by Milo on malignant exocrine compartment.
 
 library(ggplot2)
 library(miloR)

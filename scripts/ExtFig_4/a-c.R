@@ -1,4 +1,4 @@
-# This scripts generates a dot plot of PDAC-recurrence signatures' score par patient.
+# This scripts plots Extended Data Fig. 4a-c; it generates a dot plot of PDAC-recurrence signatures' score per patient.
 # rows: PDAC-recurrence signatures
 # column: patients
 # dot size: fraction of cells significantly expressing that signature
@@ -20,28 +20,27 @@ library(patchwork)
 library(cowplot)
 library(parallel)
 
-# Reading in data ####
+# Reading in PDAC-recurrence signatures ####
 message('Reading in data')
 
-# PDAC-recurrence signatures
-
+# lung
 pdac_lung_markers = read.delim('Misc/cell_types_markers_main_subtypes_lung.tsv', header = T, sep = '\t')
 pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$cluster %in% 'all' & pdac_lung_markers$avg_log2FC >= 1,]
 pdac_lung_markers = trimws(pdac_lung_markers$gene)
 
+# liver
 pdac_liver_markers = read.delim('Misc/cell_types_markers_main_subtypes_liver.tsv', header = T, sep = '\t')
 pdac_liver_markers = pdac_liver_markers[pdac_liver_markers$cluster %in% 'all' & pdac_liver_markers$avg_log2FC >= 1,]
 pdac_liver_markers = trimws(pdac_liver_markers$gene)
 
-# cancer data
+# Imputation ####
+message('Imputation')
 
 if(!file.exists('compartments/cacner_imputed.RData'))
 {
   load(file = 'compartments/cancer.RData')
   s_objs = subset(s_objs, cells = colnames(s_objs)[!s_objs$cell_type %in% c('G2-M','E2F Targets (S)','neural-like progenitor')] )     # all cancer cells except mitotic and NLP
   annot_ = s_objs@meta.data
-  
-  # Imputation ####
   
   s_objs = RunALRA(s_objs, assay = 'RNA', k.only = TRUE)      # only computes optimal k WITHOUT performing ALRA; by default it uses normalized data in slot data
   s_objs = RunALRA(s_objs, assay = 'RNA')                   # runs ALRA with the chosen k
@@ -64,7 +63,7 @@ for(s_ in names(pdac_sig_markers))
   for(g_ in rownames(s_objs))
   {
     exprs_ = s_objs[g_, cells_]
-
+    
     non_zero_exprs = exprs_ > 0
     if(.10*length(exprs_) <= length(which(non_zero_exprs)))     # first, makes sure the gene is expressed in at least 10% of cells; Default min.pct in FindMarkers() is 1% and we used 9% for DGEA; see the bottom of https://github.com/KlugerLab/ALRA about NCAM1 and CR2
     {
@@ -138,20 +137,20 @@ for(p_ in unique(annot_$orig.ident))
 
 pdf(file = 'a-c.pdf', width = 9, height = 5)
 
-# dot plot
+## dot plot ####
 
 # formatting data frame table for ggplot2
 dt_ = list(); i_ = 1
-for(p_ in unique(annot_$orig.ident))
+for(p_ in unique(annot_$orig.ident))      # for each patient
 {
-  for(pathw_ in names(pathws_))
+  for(pathw_ in names(pathws_))     # for each signature (LIV-MR and LUN-MR)
   {
-    exprs_ = annot_[annot_$orig.ident %in% p_, c("condition", pathw_)]
+    exprs_ = annot_[annot_$orig.ident %in% p_, c("condition", pathw_)]                                    # signature score per cell
     dt_[[i_]] = data.frame(patient = p_,
                            pathway = pathw_,
                            condition = exprs_$condition[1],
-                           exprs = mean(exprs_[,pathw_]),
-                           fraction = round(length(which(0 < exprs_[,pathw_]))/nrow(exprs_)*100, 2))
+                           exprs = mean(exprs_[,pathw_]),                                                 # signature score per patient
+                           fraction = round(length(which(0 < exprs_[,pathw_]))/nrow(exprs_)*100, 2))      # fraction of cells expressing the signature
     i_ = i_ + 1
   }
 }
@@ -179,16 +178,19 @@ p_ =  ggplot(data = dt_, aes(y = pathway, x = patient, size = fraction, color = 
 
 plot(p_)
 
-# density plots
+## density plots ####
 
 # formatting data frame table for ggplot2
-liv_1_lung_2 = annot_[annot_$condition %in% 'liver', colnames(annot_) != 'PDAC-liver recurrence signature', drop = F]
-liv_1_lung_2$score = liv_1_lung_2$`PDAC-lung recurrence signature`
-liv_1_lung_2 = liv_1_lung_2[0 < liv_1_lung_2$score,]
+liv_1_lung_2 = annot_[annot_$condition %in% 'liver',]                           # initial liver recurrence, secondary lung recurrence
+liv_1_lung_2$initial_score = liv_1_lung_2$`PDAC-liver recurrence signature`     # initial recurrence score
+liv_1_lung_2$seond_score = liv_1_lung_2$`PDAC-lung recurrence signature`        # secondary recurrence score
+liv_1_lung_2 = liv_1_lung_2[0 < liv_1_lung_2$seond_score,]                      # only non-zero secondary cell scores; this is because many of these cells
+                                                                                # are zero for secondary signature that will predominate the density curve
 
-lng_1_liv_2  = annot_[annot_$condition %in% 'lung', colnames(annot_) != 'PDAC-lung recurrence signature', drop = F]
-lng_1_liv_2$score = lng_1_liv_2$`PDAC-liver recurrence signature`
-lng_1_liv_2 = lng_1_liv_2[0 < lng_1_liv_2$score,]
+lng_1_liv_2  = annot_[annot_$condition %in% 'lung', ]                           # initial lung recurrence, secondary liver recurrence
+lng_1_liv_2$initial_score = lng_1_liv_2$`PDAC-lung recurrence signature`
+lng_1_liv_2$seond_score = lng_1_liv_2$`PDAC-liver recurrence signature`
+lng_1_liv_2 = lng_1_liv_2[0 < lng_1_liv_2$seond_score,]
 
 cols_ = c("#FF0000",  # red
           "#A52A2A",  # brown
@@ -202,39 +204,62 @@ cols_ = c("#FF0000",  # red
           "#00FF00",  # green
           "#FF00FF",  # magenta
           "#006400",  # darkgreen
-          "#00008B"  # darkblue
-          )
+          "#00008B")  # darkblue
+
 j_ = 1
 for(dt_ in list(liv_1_lung_2, lng_1_liv_2))     # for each signature
 {
-  den_ = density(dt_$score)     # density of non-zero scores
+  den_1 = density(dt_$initial_score)      # density of non-zero initial recurrence scores
+  max_x1 = den_1$x[which.max(den_1$y)]
+  
+  den_2 = density(dt_$seond_score)        # density of non-zero secondary recurrence scores
+  max_x2 = den_2$x[which.max(den_2$y)]
   
   # for each cell
   for(i_ in 1:nrow(dt_))
   {
-    score_ = dt_$score[i_]
-    ub_ = which(score_ <= den_$x)[1]
-    dt_[i_, 'den_x'] = den_$x[ub_]
-    dt_[i_, 'den_y'] = den_$y[ub_]
+    # initial recurrence
+    initial_score = dt_$initial_score[i_]
+    ub_ = which(initial_score <= den_1$x)[1]      # closest density bin to the score[i_]
+    dt_[i_,'den_x1'] = den_1$x[ub_]
+    dt_[i_,'den_y1'] = den_1$y[ub_]
+    
+    # secondary recurrence
+    seond_score = dt_$seond_score[i_]
+    ub_ = which(seond_score <= den_2$x)[1]        # closest density bin to the score[i_]
+    dt_[i_,'den_x2'] = den_2$x[ub_]
+    dt_[i_,'den_y2'] = den_2$y[ub_]
   }
-  dt_ = dt_[, c("orig.ident", 'den_x', 'den_y')]
+  dt_ = dt_[, c("orig.ident",
+                'den_x1', 'den_y1',
+                'den_x2', 'den_y2')]
   dt_$secondary = F
   dt_$secondary[dt_$orig.ident %in% c('PN9','PN18','PN4','PN13','PN15','PN17')] = T
   
   # density plot
   t_ = NULL
-  if(j_ == 1){title_ = 'LUN-MR signatrue in LIV-MR patients'; s_ = 0.5}else{'LIV-MR signatrue in LUN-MR patients'; s_ = 0.1}; j_ = j_ + 1
-  p_ =  ggplot(dt_, aes(x = den_x, y = den_y)) +
+  if(j_ == 1){t_ = 'LUN-MR signatrue in LIV-MR patients'; s_ = 0.5}else{t_ = 'LIV-MR signatrue in LUN-MR patients'; s_ = 0.1}; j_ = j_ + 1
+  p_ =  ggplot(dt_, aes(x = den_x2, y = den_y2)) +
         theme(panel.background = element_blank(),plot.title = element_text(hjust = 0.5),
               axis.line = element_line(color = 'black'),
               text = element_text(size = 20, face = 'bold', family = 'Helvetica'))+
         labs(title = t_,x = "Gene Signature Score (x)", y = "Density (y)", color = 'Patient')+
-        geom_line(color = "blue", size = 1.2)+                                                                          # Track 1: Curve for x and y
-        geom_rug(aes(x = den_x, color = orig.ident), sides = "t", size = s_, position = "jitter", show.legend = T)+                                          # Track 2: Ticks for orig.ident
-        geom_rug(data = dt_[dt_$secondary, ], aes(x = den_x, color = secondary), sides = "b", position = "jitter", size = s_)+     # Track 3: Ticks for secondary metastasis, slightly below the x-axis
-        scale_color_manual(values = c(cols_[1:length(unique(dt_$orig.ident))],"#8B0000"))
+        
+        # track 1: Curve for x and y
+        geom_line(color = "black", linewidth = 1.2)+
+        geom_line(aes(x = den_x1, y = den_y1), color = "grey70", linewidth = 1.2, linetype = 'dashed')+
+        scale_x_continuous(breaks =        c(max_x2, mean(c(max_x2,max_x1)), max_x1, max(dt_$den_x1, dt_$den_x2)),
+                           labels = round(c(max_x2, mean(c(max_x2,max_x1)), max_x1, max(dt_$den_x1, dt_$den_x2)),2) )+
+        
+        # track 2: ticks for orig.ident
+        geom_rug(aes(x = den_x2, color = orig.ident), sides = "t", linewidth = s_, position = "jitter", show.legend = T)+
+        
+        # track 3: ticks for secondary metastasis, slightly below the x-axis
+        geom_rug(data = dt_[dt_$secondary, ], aes(x = den_x2, color = secondary), sides = "b", position = "jitter", linewidth = s_)+
+        scale_color_manual(values = c(cols_[1:length(unique(dt_$orig.ident))],"#8B0000"))+
+        guides(color = guide_legend(override.aes = list(linewidth = 2)))
+
   plot(p_)
 }
 
 graphics.off()
-

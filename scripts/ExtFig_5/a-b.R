@@ -1,4 +1,5 @@
-# This scripts plots Fig. 3d-g; it takes healthy adult lung and liver data and checks liver/lung metastatic PDAC signatures in them.
+# This script plots Extended Data Fig. 5a-b; it takes healthy adult lung and liver data and checks the enrichment
+# of liver/lung metastatic PDAC signatures in them.
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")
@@ -23,17 +24,23 @@ message('signature score')
 
 # reading in liver/lung met PDAC signatures
 
+# genes to remove
+genes_remove = read.table(file = 'Misc/gdx/GDX_gene.tsv', header = T, sep = '\t', quote = "", as.is = T, check.names = F)
+rownames(genes_remove) = genes_remove$gene
+
 pdac_liver_markers = read.delim('Misc/cell_types_markers_main_subtypes_liver.tsv', header = T, sep = '\t')
 pdac_liver_markers = pdac_liver_markers[pdac_liver_markers$cluster %in% 'all',]
 pdac_liver_markers$gene = trimws(pdac_liver_markers$gene)
 pdac_liver_markers = pdac_liver_markers[pdac_liver_markers$gene %in% rownames(lng_liv),]
+pdac_liver_markers = pdac_liver_markers[!pdac_liver_markers$gene %in% rownames(genes_remove),]
 
 pdac_lung_markers = read.delim('Misc/cell_types_markers_main_subtypes_lung.tsv', header = T, sep = '\t')
 pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$cluster %in% 'all',]
 pdac_lung_markers$gene = trimws(pdac_lung_markers$gene)
 pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$gene %in% rownames(lng_liv),]
+pdac_lung_markers = pdac_lung_markers[!pdac_lung_markers$gene %in% rownames(genes_remove),]
 
-# signature score (using PC1 as score vector)
+# signature score
 
 liv_sig = pdac_liver_markers$gene[pdac_liver_markers$avg_log2FC > 0]
 lng_sig = pdac_lung_markers$gene[pdac_lung_markers$avg_log2FC > 0]
@@ -59,7 +66,7 @@ lng_liv$lng_score = lng_score
 # Visualization ####
 message('Visualization')
 
-pdf(file = 'd-g.pdf', width = 15, height = 10)
+pdf(file = 'a-b.pdf', width = 15, height = 10)
 
 # UMAP plots
 
@@ -69,12 +76,13 @@ p_ = FeaturePlot(lng_liv, features = c('liv_score','lng_score'),
                  cols = c('grey90','red3'),
                  min.cutoff = c('q40','q40'), max.cutoff = c('q99','q99'),
                  raster = F)
+p_[[1]] = p_[[1]]+scale_color_gradient(low = 'grey90', high = 'red3', breaks = range(p_[[1]]$data$liv_score), labels = c('low','high'))
+p_[[2]] = p_[[2]]+scale_color_gradient(low = 'grey90', high = 'red3', breaks = range(p_[[2]]$data$lng_score), labels = c('low','high'))
 p_[[1]] = p_[[1]] + labs(title = "PDAC-liver signature")
 p_[[2]] = p_[[2]] + labs(title = "PDAC-lung signature")
 plot(p_)
 
 # Violin plot
-
 
 lng_liv$cell_type = factor(x = lng_liv$cell_type, levels = c("Hepatocytes","Cholangiocytes",
                                                              "Alveolar Epithelial Type 1","Alveolar Epithelial Type 2","Signaling Alveolar Epithelial Type 2",

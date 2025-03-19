@@ -1,4 +1,4 @@
-# This script takes healthy fetal lung and liver data and checks liver/lung metastatic PDAC signatures in them
+# This script plots Fig. 3h-k; it takes healthy fetal lung and liver data and checks the enrichment of liver/lung metastatic PDAC signatures in them
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")
@@ -33,7 +33,7 @@ pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$cluster %in% 'all',]
 pdac_lung_markers$gene = trimws(pdac_lung_markers$gene)
 pdac_lung_markers = pdac_lung_markers[pdac_lung_markers$gene %in% rownames(lng_liv),]
 
-# signature score
+# signature score (using PC1 as score vector)
 
 liv_sig = pdac_liver_markers$gene[pdac_liver_markers$avg_log2FC > 0]
 lng_sig = pdac_lung_markers$gene[pdac_lung_markers$avg_log2FC > 0]
@@ -108,7 +108,7 @@ for(c_ in list(liv_cells, lng_cells))
   dt_ = data.frame(val = c(lng_liv$liv_score[c_],      # adult liver/lung cells with pdac-liver signature
                            lng_liv$lng_score[c_]),     # adult liver/lung cells with pdac-lng signature
                    type = rep(x = c('pdac-liver sig','pdac-lung sig'), times = c(length(c_),length(c_))) )
-  cat('PDAC recurrence signatures in cells of (d) ', lng_liv$Organ[c_][1],': ',
+  cat('PDAC recurrence signatures in cells of ', lng_liv$Organ[c_][1],': d = ',
       abs(cohens_d(formula = val ~ type, var.equal = F, data = dt_)$effsize), '\n')
   
   # Wilcox rank-sum test
@@ -122,7 +122,7 @@ for(c_ in list(liv_cells, lng_cells))
                                  y = lng_liv$lng_score[c_sub],
                                  alternative = "two.sided")$p.value
   }
-  message('PDAC recurrence signatures in cells of (q) ', lng_liv$Organ[c_][1],': ',
+  message('PDAC recurrence signatures in cells of ', lng_liv$Organ[c_][1],': q = ',
           format(median(p.adjust(p = p_values, method = 'BH')), scien = T))
 }
 

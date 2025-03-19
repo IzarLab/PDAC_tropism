@@ -1,4 +1,4 @@
-# This scripts generates UMAP and dot plots of immune compartment
+# This scripts plots Fig. 6a, b and d; generates UMAP and dot plots of immune compartment
 
 library(Seurat)
 options(Seurat.object.assay.version = "v3")
@@ -19,7 +19,7 @@ DefaultAssay(T_) = DefaultAssay(my_) = 'RNA'
 
 # UMAP of compartment ####
 
-pdf('a-b_d.pdf', width = 12, height = 12)
+pdf('a-b&d.pdf', width = 12, height = 12)
 
 B_[["umap"]]@cell.embeddings = B_[["umap"]]@cell.embeddings+5
 t_b = merge(x = T_, y = B_, merge.data = T, merge.dr = T)
@@ -32,7 +32,7 @@ DimPlot(my_, pt.size = 2, group.by = 'cell_type', label = T, label.box = T, labe
 
 s_ = T_
 Idents(s_) = s_$cell_type
-DotPlot(object = s_, features = c('HAVCR2','TIGIT','CTLA4','PDCD1'),
+DotPlot(object = s_, features = c('HAVCR2','TIGIT','CTLA4','PDCD1'),      # exhaustion markers (inhibitory immune checkpoints)
         scale = F,
         dot.min = 0.05, dot.scale = 15,
         scale.by = 'size',

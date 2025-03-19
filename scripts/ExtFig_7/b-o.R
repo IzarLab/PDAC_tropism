@@ -1,4 +1,4 @@
-# This script plots FGA and TMB given SSM, CNV and SV mutations of MSK-MET data taken from: https://zenodo.org/records/5801902
+# This script plots FGA and TMB of primary PDAC given SSM, CNV and SV mutations of MSK-MET data taken from: https://zenodo.org/records/5801902
 # Downloaded files are data_clinical_sample.txt, data_mutations.txt, data_cna.txt and data_sv.txt
 
 library(ggplot2)
@@ -18,7 +18,7 @@ rownames(dt_smpl) = dt_smpl$SAMPLE_ID
 
 # subsetting sample data on liver and lung metastatic sites
 
-# dt_smpl = dt_smpl[dt_smpl$MET_SITE_COUNT %in% 1,]      # only one metastasis during the follow-up time?
+# dt_smpl = dt_smpl[dt_smpl$MET_SITE_COUNT %in% 1,]     # only one metastasis during the follow-up time? too few lungs will remain (these are primary tumors and should express tropism signatures)
 liv_smpls = dt_smpl$SAMPLE_ID[dt_smpl$DMETS_DX_LIVER %in% 'Yes']
 lng_smpls = dt_smpl$SAMPLE_ID[dt_smpl$DMETS_DX_LUNG %in% 'Yes']
 liv_lng_smpls = intersect(liv_smpls, lng_smpls)

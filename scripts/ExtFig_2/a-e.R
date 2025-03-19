@@ -1,4 +1,4 @@
-# This scripts plots QC violin plots
+# This scripts plots Extended Data Fig. 2a-e (QC violin plots).
 
 library(Seurat)
 library(SeuratObject)

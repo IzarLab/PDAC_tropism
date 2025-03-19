@@ -1,4 +1,4 @@
-# This script plots Extended Data Fig. 6b; it plots KM curve for OS of MSK-MET data taken from: https://zenodo.org/records/5801902
+# This script plots Extended Data Fig. 6h; it plots KM curve for OS of MSK-MET data taken from: https://zenodo.org/records/5801902
 # Downloaded files are data_clinical_sample.txt and data_clinical_patient.txt
 
 library(ggplot2)
@@ -43,29 +43,28 @@ dt_pnt = dt_pnt[!is.infinite(dt_pnt$start) & !is.infinite(dt_pnt$end) & (0 <= dt
 
 # initial metastatic site
 
-dt_smpl = dt_smpl[dt_smpl$MET_SITE_COUNT == 1,]     # only one metastatic site during the follow-up time; among MET_COUNT and MET_SITE_COUNT the latter corresponds to number of Yes's
-initial_met_liver = dt_smpl[dt_smpl$MET_SITE %in% 'DMETS_DX_LIVER',]
-initial_met_liver_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_liver$PATIENT_ID,]
+initial_met_liver_lung = dt_smpl[dt_smpl$MET_SITE %in% 'DMETS_DX_LUNG,DMETS_DX_LIVER',]
+initial_met_liver_lung_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_liver_lung$PATIENT_ID,]
 
-initial_met_others = dt_smpl[!dt_smpl$MET_SITE %in% c('DMETS_DX_LIVER','DMETS_DX_LUNG','DMETS_DX_DIST_LN'),]
+initial_met_others = dt_smpl[! grepl(x = dt_smpl$MET_SITE ,pattern = '(DMETS_DX_LUNG)|(DMETS_DX_LIVER)', perl = T),]
 initial_met_others_os = dt_pnt[dt_pnt$PATIENT_ID %in% initial_met_others$PATIENT_ID,]
 
 # Plotting KM curve ####
 
 # preparing data
 
-dt_ = data.frame(patients   = c(initial_met_liver_os$PATIENT_ID,
+dt_ = data.frame(patients   = c(initial_met_liver_lung_os$PATIENT_ID,
                                 initial_met_others_os$PATIENT_ID),
                  
-                 DFS_MONTH  = c(initial_met_liver_os$DFS_MONTH,
+                 DFS_MONTH  = c(initial_met_liver_lung_os$DFS_MONTH,
                                 initial_met_others_os$DFS_MONTH),
                  
-                 DFS_STATUS = c(initial_met_liver_os$DFS_STATUS,      # it is required to use a numerical variable to be able to use ggsurvplot, as it does not work with factor
-                               initial_met_others_os$DFS_STATUS),
+                 DFS_STATUS = c(initial_met_liver_lung_os$DFS_STATUS,      # it is required to use a numerical variable to be able to use ggsurvplot, as it does not work with factor
+                                initial_met_others_os$DFS_STATUS),
                  
-                 initial_met = rep(x = c('liver',
+                 initial_met = rep(x = c('liver-lung',
                                          'other'),
-                                   times = c(nrow(initial_met_liver_os),
+                                   times = c(nrow(initial_met_liver_lung_os),
                                              nrow(initial_met_others_os))),
                  stringsAsFactors = T)
 
@@ -79,7 +78,7 @@ km_fit = survfit(surv_object ~ initial_met, data = dt_)
 
 # plotting
 
-pdf(file = 'b.pdf', width = 7.5, height = 9)
+pdf(file = 'h.pdf', width = 7.5, height = 9)
 ggsurvplot(km_fit, data = dt_,
            pval = T, pval.method = T, conf.int = T,
            risk.table = T,

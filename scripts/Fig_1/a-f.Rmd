@@ -1,206 +1,270 @@
+<!-- This script generates Fig. 1 -->
+
 ---
-title: "Neoadjuvant 3-20-21"
+title: "CUIMC PDAC cohort"
 output:
-  pdf_document: default
-  html_notebook: default
   html_document: default
+  html_notebook: default
+  pdf_document: default
 ---
 
-```{r setup}
-knitr::opts_chunk$set(echo = TRUE)
+```{r Session setup}
 
-#Load packages
-library(lubridate)
+knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 6, fig.align='center')
+```
+
+```{r Load packages}
+
 library(survival)
 library(ggplot2)
-library(ggfortify)
-library(ranger)
-library(dplyr)
-library(zip)
-library(ggpubr)
+library(gridExtra)
 library(survminer)
 library(swimplot)
-library(scales)
+library(car)
 ```
 
-```{r}
-#Uploading data
+```{r Reading in data}
 
-retrospective = read.csv("../../Misc/fullcohort.csv",stringsAsFactors = F)
-retrospective = retrospective %>% filter(is.na(id) == FALSE)
-retrospectiveseq = read.csv("../../Misc/seqcohort.csv",stringsAsFactors = F)
-retrospectiveseq = retrospectiveseq %>% filter(is.na(id) == FALSE)
+fcohort_ = read.delim(file = "../../Misc/fullcohort_cleaned.tsv", header = T, sep = '\t', quote = "", as.is = T, check.names = F, stringsAsFactors = F, na.strings = c('','NA','n/a','na'))
+fcohort_$vital_status[!fcohort_$vital_status %in% 1] = 0      # event of interest is dead:1, the rest 0
 
-swimlung = read.csv("../../Misc/lungswim.csv",stringsAsFactors = F)
-swimlung$time = swimlung$time/365
-swimlung = swimlung %>% filter(is.na(ptid) == FALSE)
-swimliver = read.csv("../../Misc/liverswim.csv",stringsAsFactors = F)
-swimliver$time = swimliver$time/365
+fcohort_$diagnosis_dt = as.Date(fcohort_$diagnosis_dt)
 
-liverstatus = read.csv("../../Misc/liverstatus.csv",stringsAsFactors = F)
-liverstatus$last = liverstatus$last/365
-liverstatus = liverstatus %>% filter(is.na(ptid) == FALSE)
+fcohort_$last_follow_up = as.Date(fcohort_$last_follow_up)
+fcohort_$yrs_to_last_followup = (fcohort_$last_follow_up - fcohort_$diagnosis_dt)/365.25
+
+fcohort_$recurrence_dt = as.Date(fcohort_$recurrence_dt)
+fcohort_$yrs_to_recurrance = (fcohort_$recurrence_dt - fcohort_$diagnosis_dt)/365.25
+fcohort_$yrs_to_recurrance[is.na(fcohort_$yrs_to_recurrance)] = 100000
+
+fcohort_$yrs_to_recurrance_or_death = pmin(fcohort_$yrs_to_recurrance,fcohort_$yrs_to_last_followup)
+```
+
+```{r Correlation analysis}
+
+# correlation analysis
+
+fcohort_$recur_site_coded[fcohort_$recur_site %in% 'liver'] = as.integer(0)
+fcohort_$recur_site_coded[fcohort_$recur_site %in% 'lung'] = as.integer(1)
+
+fcohort_$sex_coded[fcohort_$sex %in% 'F'] = as.integer(0)
+fcohort_$sex_coded[fcohort_$sex %in% 'M'] = as.integer(1)
+
+c_ = fcohort_[,c("recur_site_coded","age", "sex_coded", "neoadjuvant", "adjuvant", "grade", "stage", "nodal_status")]
+cat("Pearson's coefficient\n")
+cor(c_, use = 'pairwise.complete.obs', method = 'pearson')     # Spearman and Kendall returns comparable results
+```
+
+```{r Overall survival KM (liver vs lung vs none)}
+
+# cohort subset
+dt_ = rbind(fcohort_[fcohort_$recur_site %in% "lung",], fcohort_[fcohort_$recur_site %in% "liver",], fcohort_[is.na(fcohort_$recur_site),])
+dt_$recur_site[is.na(dt_$recur_site)] = 'none'
+dt_liv_none = dt_[! (dt_$recur_site %in% 'lung'),]
+dt_liv_none$recur_site = factor(dt_liv_none$recur_site, level = c('none','liver'))      # reference will be none
+dt_lung_none = dt_[! (dt_$recur_site %in% 'liver'),]
+dt_lung_none$recur_site = factor(dt_lung_none$recur_site, level = c('none','lung'))     # reference will be none
+
+i_ = 1
+for(dt_ in list(dt_liv_none, dt_lung_none))
+{
+  # create a survival object
+  s_obj = Surv(dt_$yrs_to_last_followup, dt_$vital_status)
+  
+  # crude model
+  fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+  s_crd = summary(fit_crd)
+  # adjusted model
+  fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+  s_adj = summary(fit_adj)
+  
+  t_ = t_ = if(i_ == 1){'recur-site (none vs liver)'}else{'recur-site (none vs lung)'}
+  print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
+                   pcnt_change = abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
+                   CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
+                   CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                   p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                   p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                   row.names = rownames(s_crd$coefficients)) )
+  # KM curve
+  t_ = if(i_ == 1){'Cohort OS (none vs liver)'}else{'Cohort OS (none vs lung)'}; i_ = i_ + 1
+  p_ = ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
+             xlab = 'Years', title = t_,
+             palette = c('red','blue'),
+             pval = T, pval.method = T, conf.int = F,
+             risk.table = T,
+             xlim = c(0, 7), break.time.by = 1)
+  print(p_)
+}
+
+```
+
+```{r Overall survival KM (liver- or lung-only cohort)}
+
+# cohort subset
+dt_ = rbind(fcohort_[fcohort_$recur_site %in% "lung",], fcohort_[fcohort_$recur_site %in% "liver",])
+
+# create a survival object
+s_obj = Surv(dt_$yrs_to_last_followup, dt_$vital_status)
+
+# crude model
+fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+s_crd = summary(fit_crd)
+# adjusted model
+fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+s_adj = summary(fit_adj)
+
+print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
+                 pcnt_change = abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
+                 CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
+                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 row.names = 'recur_site: lung (ref. liver)'))
+
+# KM curve
+ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
+           xlab = 'Years', title = 'Cohort OS',
+           palette = c('red','blue'),
+           pval = T, pval.method = T, conf.int = F,
+           risk.table = T,
+           xlim = c(0, 7), break.time.by = 1)
+```
+
+```{r Disease-free survival KM (liver- or lung-only cohort)}
+
+# cohort dataset
+fcohort_$recur_status = pmax(fcohort_$recur, fcohort_$vital_status)
+dt_ = rbind(fcohort_[fcohort_$recur_site %in% "lung",],fcohort_[fcohort_$recur_site %in% "liver",])
+
+# create a survival object
+s_obj = Surv(dt_$yrs_to_recurrance_or_death, dt_$recur_status)
+
+# crude model
+fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+s_crd = summary(fit_crd)
+# adjusted
+fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+s_adj = summary(fit_adj)
+
+print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
+                 pcnt_change= abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
+                 CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
+                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 row.names = 'recur_site: lung (ref. liver)'))
+
+# KM curve
+ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
+           xlab = 'Years', title = 'Cohort DFS',
+           palette = c('red','blue'),
+           pval = T, pval.method = T, conf.int = F,
+           risk.table = T,
+           xlim = c(0, 7), break.time.by = 1)
+```
+
+```{r Overall survival KM (snRNAseq cohort)}
+
+# cohort dataset
+seq_cohort = fcohort_[fcohort_$sequenced %in% 1,]
+seq_cohort$recur_site[seq_cohort$recur_site %in% "liver/local"] = 'liver'
+dt_ = rbind(seq_cohort[seq_cohort$recur_site %in% "lung",], seq_cohort[seq_cohort$recur_site %in% "liver",])
+
+# create a survival object
+s_obj = Surv(dt_$yrs_to_last_followup, dt_$vital_status)
+
+# crude model
+fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+s_crd = summary(fit_crd)
+# adjusted
+fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+s_adj = summary(fit_adj)
+
+print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
+                 pcnt_change= abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
+                 CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
+                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 row.names = 'recur_site: lung (ref. liver)'))
+
+# fit survival curves using survfit()
+ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
+           xlab = 'Years', title = 'snRNAseq OS',
+           palette = c('red','blue'),
+           pval = T, pval.method = T, conf.int = F,
+           risk.table = T,
+           xlim = c(0, 7), break.time.by = 1)
+```
+
+```{r Disease-free survival KM (snRNAseq cohort)}
+
+# cohort dataset
+dt_ = rbind(seq_cohort[seq_cohort$recur_site %in% "lung",],seq_cohort[seq_cohort$recur_site %in% "liver",])
+
+# create a survival object
+s_obj = Surv(dt_$yrs_to_recurrance_or_death, dt_$recur_status)
+
+# crude model
+fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+s_crd = summary(fit_crd)
+# adjusted
+fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+s_adj = summary(fit_adj)
+
+print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
+                 pcnt_change= abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
+                 CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
+                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
+                 row.names = 'recur_site: lung (ref. liver)'))
+
+# KM curve
+ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
+           xlab = 'Years', title = 'snRNAseq DFS',
+           palette = c('red','blue'),
+           pval = T, pval.method = T, conf.int = F,
+           risk.table = T,
+           xlim = c(0, 7), break.time.by = 1)
+```
+
+```{r Swmmmer plots}
+# Swimmer plots
+
+# reading in data
+swimlung = read.csv("../../Misc/lungswim.csv", stringsAsFactors = F)
+swimlung$time = swimlung$time/365.25
+swimlung = swimlung[!is.na(swimlung$ptid),]
+
+swimliver = read.csv("../../Misc/liverswim.csv", stringsAsFactors = F)
+swimliver$time = swimliver$time/365.25
+swimliver = swimliver[!is.na(swimliver$ptid),]
+
+liverstatus = read.csv("../../Misc/liverstatus.csv", stringsAsFactors = F)
+liverstatus$last = liverstatus$last/365.25
+liverstatus = liverstatus[!is.na(liverstatus$ptid),]
+
 lungstatus = read.csv("../../Misc/lungstatus.csv",stringsAsFactors = F)
-lungstatus$last = lungstatus$last/365
-lungstatus = lungstatus %>% filter(is.na(ptid) == FALSE)
+lungstatus$last = lungstatus$last/365.25
+lungstatus = lungstatus[!is.na(lungstatus$ptid),]
 
 liverrecur2 = read.csv("../../Misc/liverrecur2.csv",stringsAsFactors = F)
-liverrecur2$time = liverrecur2$time/365
-liverrecur2 = liverrecur2 %>% filter(is.na(ptid) == FALSE)
+liverrecur2$time = liverrecur2$time/365.25
+liverrecur2 = liverrecur2[!is.na(liverrecur2$ptid),]
+
 lungrecur2 = read.csv("../../Misc/lungrecur2.csv",stringsAsFactors = F)
-lungrecur2$time = lungrecur2$time/365
-lungrecur2 = lungrecur2 %>% filter(is.na(ptid) == FALSE)
-```
+lungrecur2$time = lungrecur2$time/365.25
+lungrecur2 = lungrecur2[!is.na(lungrecur2$ptid),]
 
-```{r}
-#formatting dates
-
-retrospective$last_follow_up = mdy(retrospective$last_follow_up)
-retrospective$dx_date = mdy(retrospective$dx_date)
-retrospective$recur_date = mdy(retrospective$recur_date)
-retrospective$sx_date = mdy(retrospective$sx_date)
-retrospective$days_to_last_followup = retrospective$last_follow_up - retrospective$dx_date
-retrospective$surg_to_last_followup = retrospective$last_follow_up - retrospective$sx_date
-retrospective$days_to_recurrance = retrospective$recur_date - retrospective$dx_date
-retrospective$surg_to_recurrance = retrospective$recur_date - retrospective$sx_date
-retrospective$days_to_surgery = retrospective$sx_date - retrospective$dx_date
-retrospective$days_to_recurrance[is.na(retrospective$days_to_recurrance)] <- 100000
-retrospective$days_to_recurrance_or_death = pmin(retrospective$days_to_recurrance,retrospective$days_to_last_followup)
-retrospective$surg_to_recurrance_or_death = pmin(retrospective$surg_to_recurrance,retrospective$surg_to_last_followup)
-retrospective$recurrence_to_last_fu = retrospective$last_follow_up - retrospective$recur_date
-
-retrospectiveseq$last_follow_up = mdy(retrospectiveseq$last_follow_up)
-retrospectiveseq$dx_date = mdy(retrospectiveseq$dx_date)
-retrospectiveseq$recur_date = mdy(retrospectiveseq$recur_date)
-retrospectiveseq$sx_date = mdy(retrospectiveseq$sx_date)
-retrospectiveseq$days_to_last_followup = retrospectiveseq$last_follow_up - retrospectiveseq$dx_date
-retrospectiveseq$surg_to_last_followup = retrospectiveseq$last_follow_up - retrospectiveseq$sx_date
-retrospectiveseq$days_to_recurrance = retrospectiveseq$recur_date - retrospectiveseq$dx_date
-retrospectiveseq$surg_to_recurrance = retrospectiveseq$recur_date - retrospectiveseq$sx_date
-retrospectiveseq$days_to_surgery = retrospectiveseq$sx_date - retrospectiveseq$dx_date
-retrospectiveseq$days_to_recurrance[is.na(retrospectiveseq$days_to_recurrance)] <- 100000
-retrospectiveseq$days_to_recurrance_or_death = pmin(retrospectiveseq$days_to_recurrance,retrospectiveseq$days_to_last_followup)
-retrospectiveseq$surg_to_recurrance_or_death = pmin(retrospectiveseq$surg_to_recurrance,retrospectiveseq$surg_to_last_followup)
-retrospectiveseq$recurrence_to_last_fu = retrospectiveseq$last_follow_up - retrospectiveseq$recur_date
-```
-
-```{r}
-#adding "status" column
-retrospective$status = 0
-retrospective$status[retrospective$vital_status == "dead"] = 1
-retrospective$recur_status = pmax(retrospective$recur,retrospective$status)
-
-retrospectiveseq$status = 0
-retrospectiveseq$status[retrospectiveseq$vital_status == "dead"] = 1
-retrospectiveseq$recur_status = pmax(retrospectiveseq$recur,retrospectiveseq$status)
-```
-
-```{r}
-#Swimmer Plots
-swimmer_plot(df=swimlung,id='ptid',end='time',name_fill='interval',col="black",alpha=0.75,width=.8) + swimmer_points(df_points=lungrecur2,id='ptid',time='time', name_shape ='further_recur',size=2.5,fill='white',col='black') + scale_y_continuous(name = "Years", breaks = c(0,1,2,3,4,5,6,7,8,9,10)) +
+# plotting lung
+swimmer_plot(df = swimlung,id='ptid',end='time',name_fill='interval',col="black",alpha=0.75,width=.8)+
+swimmer_points(df_points=lungrecur2,id='ptid',time='time', name_shape ='further_recur',size=2.5,fill='white',col='black') + scale_y_continuous(name = "Years", breaks = c(0,1,2,3,4,5,6,7,8,9,10))+
 swimmer_arrows(df_arrows=lungstatus,id='ptid',arrow_start='last', name_col='vital_status',type = "open",cex=1)
 
-swimmer_plot(df=swimliver,id='ptid',end='time',name_fill='interval',col="black",alpha=0.75,width=.8) + swimmer_points(df_points=liverrecur2,id='ptid', time='time',name_shape ='further_recur',size=2.5,fill='white',col='black') + scale_y_continuous(name = "Years", breaks = c(0,1,2,3,4,5,6,7,8,9,10)) +
+# potting liver
+swimmer_plot(df = swimliver,id='ptid',end='time',name_fill='interval',col="black",alpha=0.75,width=.8)+
+swimmer_points(df_points=liverrecur2,id='ptid', time='time',name_shape ='further_recur',size=2.5,fill='white',col='black') + scale_y_continuous(name = "Years", breaks = c(0,1,2,3,4,5,6,7,8,9,10)) +
 swimmer_arrows(df_arrows=liverstatus,id='ptid',arrow_start='last', name_col='vital_status',type = "open",cex=1)
-```
-
-```{r}
-
-#Lung liver KM curves
-retrospective_recur_lung = retrospective %>% filter(recur_site == "lung")
-retrospective_recur_liver = retrospective %>% filter(recur_site == "liver")
-```
-
-```{r}
-# KM OS recurrence site, days from diagnosis
-
-# create a survival object
-dt_ = rbind(retrospective_recur_lung,retrospective_recur_liver)
-s_obj = with(dt_, Surv(days_to_last_followup/365, status))
-
-# fit survival curves using survfit()
-km_recur_site <- survfit(s_obj ~ recur_site, data = dt_)
-
-# perform a log-rank test using survdiff() to get the p-value
-test <- survdiff(s_obj ~ recur_site, data = dt_)
-
-# extract the p-value
-p_value <- 1 - pchisq(test$chisq, length(test$n) - 1)
-p_value = (paste("log-rank test p-value:", format(p_value, scientific = T)))
-
-# plotting
-summary(km_recur_site, times = c(0,1*(1:7)))
-plot(km_recur_site,conf.int = FALSE,xlim = c(0,7), ylim = c(0,1), col = c("red","blue","green","purple"),ylab = "% survival",xlab = "years",mark.time = TRUE, cex = 0.5,yscale = 100,xaxs = "S", main = p_value)
-```
-
-```{r}
-#KM RFS recurrence site, days from diagnosis
-
-# create a survival object
-dt_ = rbind(retrospective_recur_lung,retrospective_recur_liver)
-s_obj = with(dt_, Surv(days_to_recurrance_or_death/365, recur_status))
-
-# fit survival curves using survfit()
-km_rfs_recur_site <- survfit(s_obj ~ recur_site, data = dt_)
-
-# perform a log-rank test using survdiff() to get the p-value
-test <- survdiff(s_obj ~ recur_site, data = dt_)
-
-# extract the p-value
-p_value <- 1 - pchisq(test$chisq, length(test$n) - 1)
-p_value = (paste("log-rank test p-value:", format(p_value, scientific = T)))
-
-# plotting
-summary(km_rfs_recur_site, times = c(0,1*(1:7)))
-plot(km_rfs_recur_site,conf.int = FALSE,xlim = c(0,7), ylim = c(0,1), col = c("red","blue","green","purple"),ylab = "% survival",xlab = "years",mark.time = TRUE, cex = 0.5,yscale = 100,xaxs = "S", main = p_value)
-```
-```{r}
-#Lung liver KM curves seq cohort
-retrospective_recur_lung_seq = retrospectiveseq %>% filter(recur_site == "lung")
-retrospective_recur_liver_seq = retrospectiveseq %>% filter(recur_site == "liver")
-```
-
-```{r}
-#KM OS recurrence site, days from diagnosis seq cohort
-
-# create a survival object
-dt_ = rbind(retrospective_recur_lung_seq,retrospective_recur_liver_seq)
-s_obj = with(dt_, Surv(days_to_last_followup/365, status))
-
-# fit survival curves using survfit()
-km_recur_site_seq <- survfit(s_obj ~ recur_site, data = dt_)
-
-# perform a log-rank test using survdiff() to get the p-value
-test <- survdiff(s_obj ~ recur_site, data = dt_)
-
-# extract the p-value
-p_value <- 1 - pchisq(test$chisq, length(test$n) - 1)
-p_value = (paste("log-rank test p-value:", format(p_value, scientific = T)))
-
-# plotting
-summary(km_recur_site_seq, times = c(0,1*(1:7)))
-plot(km_recur_site_seq,conf.int = FALSE,xlim = c(0,7), ylim = c(0,1), col = c("red","blue","green","purple"),ylab = "% survival",xlab = "years",mark.time = TRUE, cex = 0.5,yscale = 100,xaxs = "S", main = p_value)
-```
-
-
-```{r}
-#KM RFS recurrence site, days from diagnosis seq cohort
-
-# create a survival object
-dt_ = rbind(retrospective_recur_lung_seq,retrospective_recur_liver_seq)
-s_obj = with(dt_, Surv(days_to_recurrance_or_death/365, recur_status))
-
-# fit survival curves using survfit()
-km_rfs_recur_site_seq <- survfit(s_obj ~ recur_site, data = dt_)
-
-# perform a log-rank test using survdiff() to get the p-value
-test <- survdiff(s_obj ~ recur_site, data = dt_)
-
-# extract the p-value
-p_value <- 1 - pchisq(test$chisq, length(test$n) - 1)
-p_value = (paste("log-rank test p-value:", format(p_value, scientific = T)))
-
-# plotting
-summary(km_rfs_recur_site_seq, times = c(0,1*(1:7)))
-plot(km_rfs_recur_site_seq,conf.int = FALSE,xlim = c(0,7), ylim = c(0,1), col = c("red","blue","green","purple"),ylab = "% survival",xlab = "years",mark.time = TRUE, cex = 0.5,yscale = 100,xaxs = "S", main = p_value)
 ```

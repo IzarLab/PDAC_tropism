@@ -1,4 +1,4 @@
-# This script plots the expression of markers in exocrine compartment
+# This script plots Fig. 5a,c,d,f and g (expression of some important markers in exocrine compartment).
 
 library(Seurat)
 library(SeuratObject)
@@ -50,7 +50,7 @@ EMT_ = c('ABI3BP','ACTA2','ADAM12','ANPEP','APLP1','AREG','BASP1','BDNF','BGN','
 
 # Plotting ####
 
-pdf('a_c-d_f-g.pdf', width = 7, height = 7)
+pdf('a&c-d&f-g.pdf', width = 7, height = 7)
 
 # Differentiating cancer
 

@@ -1,4 +1,4 @@
-# This scripts carries out differential cell abundance analysis by Milo on T compartment
+# This scripts plots Fig. 6c; it carries out differential cell abundance analysis by Milo on T compartment
 
 library(ggplot2)
 library(miloR)

@@ -1,4 +1,4 @@
-# This scripts carries out differential cell abundance analysis by Milo on myeloid compartment
+# This scripts plots Fig. 6f; it carries out differential cell abundance analysis by Milo on myeloid compartment
 
 library(ggplot2)
 library(miloR)
