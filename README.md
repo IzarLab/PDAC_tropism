@@ -13,7 +13,7 @@ To run each figure script:
 4. open RStudio (or any other R-enabled IDE) and set **current directory**, `setwd()`, to **Documents/PDAC_tropism/**. Each **Fig_x** folder contains some R scripts corresponding to each figure panel within the paper.
 
 Att.:
-1. For generating Fig. 2c, download **PN14_S134_L002_tumor.cna.seg** and **PN14_S134_L002_tumor.seg** available on GEO lpWGS repository (accession number given in the paper), then use `ichorCNA` with the parameters given by **scripts/Fig_2/c.pdf**.
+1. For generating Fig. 2c, download **PN14_S134_L002_tumor.cna.seg** and **PN14_S134_L002_tumor.seg** available on GEO lpWGS repository (accession number given in the paper), then run `ichorCNA` with the parameters given by **scripts/Fig_2/c.pdf**.
 2. To generate the circos plot (Fig. 4j) there are two ways.
    - **_Easy way_**:  
      - open a Terminl session and change the directory to **scripts/Fig_4/**. Type in `jupyter notebook` and open **j.ipynb** from within a web browser (like Chrome).  
