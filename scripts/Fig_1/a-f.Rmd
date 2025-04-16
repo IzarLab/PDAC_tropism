@@ -38,6 +38,8 @@ fcohort_$yrs_to_recurrance = (fcohort_$recurrence_dt - fcohort_$diagnosis_dt)/36
 fcohort_$yrs_to_recurrance[is.na(fcohort_$yrs_to_recurrance)] = 100000
 
 fcohort_$yrs_to_recurrance_or_death = pmin(fcohort_$yrs_to_recurrance,fcohort_$yrs_to_last_followup)
+
+fcohort_$recur_status = pmax(fcohort_$recur, fcohort_$vital_status)
 ```
 
 ```{r Correlation analysis}
@@ -55,16 +57,21 @@ cat("Pearson's coefficient\n")
 cor(c_, use = 'pairwise.complete.obs', method = 'pearson')     # Spearman and Kendall returns comparable results
 ```
 
-```{r Overall survival KM (liver vs lung vs none)}
+```{r Overall survival KM (liver/lung vs none)}
 
 # cohort subset
 dt_ = rbind(fcohort_[fcohort_$recur_site %in% "lung",], fcohort_[fcohort_$recur_site %in% "liver",], fcohort_[is.na(fcohort_$recur_site),])
 dt_$recur_site[is.na(dt_$recur_site)] = 'none'
+
+# liver vs none
 dt_liv_none = dt_[! (dt_$recur_site %in% 'lung'),]
 dt_liv_none$recur_site = factor(dt_liv_none$recur_site, level = c('none','liver'))      # reference will be none
+
+# lung vs none
 dt_lung_none = dt_[! (dt_$recur_site %in% 'liver'),]
 dt_lung_none$recur_site = factor(dt_lung_none$recur_site, level = c('none','lung'))     # reference will be none
 
+# for (liver vs none) and (lung vs none)
 i_ = 1
 for(dt_ in list(dt_liv_none, dt_lung_none))
 {
@@ -75,14 +82,14 @@ for(dt_ in list(dt_liv_none, dt_lung_none))
   fit_crd = coxph(s_obj ~ recur_site, data = dt_)
   s_crd = summary(fit_crd)
   # adjusted model
-  fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+  fit_adj = coxph(s_obj ~ recur_site + factor(neoadjuvant) + age, data = dt_)
   s_adj = summary(fit_adj)
   
   t_ = t_ = if(i_ == 1){'recur-site (none vs liver)'}else{'recur-site (none vs lung)'}
   print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
                    pcnt_change = abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
                    CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
-                   CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                   CI_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
                    p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                    p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                    row.names = rownames(s_crd$coefficients)) )
@@ -108,16 +115,16 @@ dt_ = rbind(fcohort_[fcohort_$recur_site %in% "lung",], fcohort_[fcohort_$recur_
 s_obj = Surv(dt_$yrs_to_last_followup, dt_$vital_status)
 
 # crude model
-fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+fit_crd = coxph(s_obj ~ factor(recur_site), data = dt_)
 s_crd = summary(fit_crd)
 # adjusted model
-fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+fit_adj = coxph(s_obj ~ factor(recur_site) + factor(neoadjuvant) + age, data = dt_)
 s_adj = summary(fit_adj)
 
 print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
                  pcnt_change = abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
                  CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
-                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 CI_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
                  p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  row.names = 'recur_site: lung (ref. liver)'))
@@ -134,23 +141,22 @@ ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
 ```{r Disease-free survival KM (liver- or lung-only cohort)}
 
 # cohort dataset
-fcohort_$recur_status = pmax(fcohort_$recur, fcohort_$vital_status)
 dt_ = rbind(fcohort_[fcohort_$recur_site %in% "lung",],fcohort_[fcohort_$recur_site %in% "liver",])
 
 # create a survival object
 s_obj = Surv(dt_$yrs_to_recurrance_or_death, dt_$recur_status)
 
 # crude model
-fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+fit_crd = coxph(s_obj ~ factor(recur_site), data = dt_)
 s_crd = summary(fit_crd)
 # adjusted
-fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+fit_adj = coxph(s_obj ~ factor(recur_site) + factor(neoadjuvant) + age, data = dt_)
 s_adj = summary(fit_adj)
 
 print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
                  pcnt_change= abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
                  CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
-                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 CI_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
                  p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  row.names = 'recur_site: lung (ref. liver)'))
@@ -175,16 +181,16 @@ dt_ = rbind(seq_cohort[seq_cohort$recur_site %in% "lung",], seq_cohort[seq_cohor
 s_obj = Surv(dt_$yrs_to_last_followup, dt_$vital_status)
 
 # crude model
-fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+fit_crd = coxph(s_obj ~ factor(recur_site), data = dt_)
 s_crd = summary(fit_crd)
 # adjusted
-fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+fit_adj = coxph(s_obj ~ factor(recur_site) + factor(neoadjuvant) + age, data = dt_)
 s_adj = summary(fit_adj)
 
 print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
                  pcnt_change= abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
                  CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
-                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 CI_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
                  p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  row.names = 'recur_site: lung (ref. liver)'))
@@ -201,22 +207,24 @@ ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
 ```{r Disease-free survival KM (snRNAseq cohort)}
 
 # cohort dataset
+seq_cohort = fcohort_[fcohort_$sequenced %in% 1,]
+seq_cohort$recur_site[seq_cohort$recur_site %in% "liver/local"] = 'liver'
 dt_ = rbind(seq_cohort[seq_cohort$recur_site %in% "lung",],seq_cohort[seq_cohort$recur_site %in% "liver",])
 
 # create a survival object
 s_obj = Surv(dt_$yrs_to_recurrance_or_death, dt_$recur_status)
 
 # crude model
-fit_crd = coxph(s_obj ~ recur_site, data = dt_)
+fit_crd = coxph(s_obj ~ factor(recur_site), data = dt_)
 s_crd = summary(fit_crd)
 # adjusted
-fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + grade + age, data = dt_)
+fit_adj = coxph(s_obj ~ factor(recur_site) + factor(neoadjuvant) + age, data = dt_)
 s_adj = summary(fit_adj)
 
 print(data.frame(HZ_crd = s_crd$coefficients[1,"exp(coef)"], HZ_adj = s_adj$coefficients[1,"exp(coef)"],
                  pcnt_change= abs(s_crd$coefficients[1,"exp(coef)"]-s_adj$coefficients[1,"exp(coef)"])/s_crd$coefficients[1,"exp(coef)"]*100,
                  CI_crd = paste0(round(s_crd$conf.int[1,c("lower .95","upper .95")],2), collapse = ','), 
-                 CT_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
+                 CI_adj = paste0(round(s_adj$conf.int[1,c("lower .95","upper .95")],2), collapse = ','),
                  p_crd = format(round(s_crd$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                  row.names = 'recur_site: lung (ref. liver)'))
