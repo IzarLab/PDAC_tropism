@@ -17,6 +17,7 @@ knitr::opts_chunk$set(echo = TRUE, fig.width = 6, fig.height = 6, fig.align='cen
 
 library(survival)
 library(ggplot2)
+library(grid)
 library(gridExtra)
 library(survminer)
 library(swimplot)

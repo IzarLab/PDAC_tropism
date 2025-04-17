@@ -1,5 +1,6 @@
 library(survival)
 library(ggplot2)
+library(grid)
 library(gridExtra)
 library(survminer)
 library(swimplot)
@@ -8,7 +9,7 @@ library(forestploter)
 
 # Reading cohort data in ####
 
-fcohort_ = read.delim(file = "../../Misc/fullcohort_cleaned.tsv", header = T, sep = '\t', quote = "", as.is = T, check.names = F, stringsAsFactors = F, na.strings = c('','NA','n/a','na'))
+fcohort_ = read.delim(file = "Misc/fullcohort_cleaned.tsv", header = T, sep = '\t', quote = "", as.is = T, check.names = F, stringsAsFactors = F, na.strings = c('','NA','n/a','na'))
 fcohort_$vital_status[!fcohort_$vital_status %in% 1] = 0      # event of interest is dead:1, the rest 0
 
 fcohort_$diagnosis_dt = as.Date(fcohort_$diagnosis_dt)
@@ -22,6 +23,8 @@ fcohort_$yrs_to_recurrance[is.na(fcohort_$yrs_to_recurrance)] = 100000
 
 fcohort_$yrs_to_recurrance_or_death = pmin(fcohort_$yrs_to_recurrance,fcohort_$yrs_to_last_followup)
 
+fcohort_$recur_status = pmax(fcohort_$recur, fcohort_$vital_status)
+
 # Survival analysis by multivaiate Cox Proportional Hazards Regression Model ####
 
 # cohort subset
@@ -31,7 +34,7 @@ dt_ = rbind(fcohort_[fcohort_$recur_site %in% "lung",], fcohort_[fcohort_$recur_
 s_obj = Surv(dt_$yrs_to_last_followup, dt_$vital_status)
 
 # adjusted model
-fit_adj = coxph(s_obj ~ factor(recur_site) + factor(neoadjuvant) + age, data = dt_)
+fit_adj = coxph(s_obj ~ factor(recur_site) + factor(neoadjuvant) + factor(stage) + age, data = dt_)
 s_adj = summary(fit_adj)
 
 # Forest plot ####
@@ -46,6 +49,10 @@ df_ = data.frame(Subgroup = c('Recurrence',
                               'no',
                               'yes',
                               
+                              'Stage',
+                              '2',
+                              '3',
+                              
                               'Age'),
                  
                              Number = c(# Recurrence
@@ -57,6 +64,11 @@ df_ = data.frame(Subgroup = c('Recurrence',
                                '',
                                nrow(dt_[dt_$neoadjuvant %in% 0,]),# no ref.
                                nrow(dt_[dt_$neoadjuvant %in% 1,]),# yes
+                               
+                               # Stage
+                               '',
+                               nrow(dt_[dt_$stage %in% 2,]),# 2 ref.
+                               nrow(dt_[dt_$stage %in% 3,]),# 3
                                
                                # Age
                                nrow(dt_[!is.na(dt_$age),])),
@@ -71,47 +83,70 @@ df_ = data.frame(Subgroup = c('Recurrence',
                                1,                          # no ref,
                                s_adj$conf.int[2],          # yes
                                
+                               # Stage
+                               NA,
+                               1,                          # 2 ref,
+                               s_adj$conf.int[3],          # 3
+                               
                                # Age
-                               s_adj$conf.int[3]),
+                               s_adj$conf.int[4]),
                              
                              low = c(# Recurrence
                                NA,
                                1,                          # liver ref.
-                               s_adj$conf.int[7],          #lung
+                               s_adj$conf.int[9],          #lung
                                
                                # Neoadjuvant
                                NA,
                                1,                          # no ref,
-                               s_adj$conf.int[8],          # yes
+                               s_adj$conf.int[10],          # yes
+                               
+                               # Stage
+                               NA,
+                               1,                          # 2 ref,
+                               s_adj$conf.int[11],          # 3
                                
                                # Age
-                               s_adj$conf.int[9]),
+                               s_adj$conf.int[12]),
                              
                              hi = c(# Recurrence
                                NA,
                                1,                          # liver ref.
-                               s_adj$conf.int[10],          #lung
+                               s_adj$conf.int[13],          #lung
                                
                                # Neoadjuvant
                                NA,
                                1,                          # no ref,
-                               s_adj$conf.int[11],          # yes
+                               s_adj$conf.int[14],          # yes
+                               
+                               # Stage
+                               NA,
+                               1,                          # 2 ref,
+                               s_adj$conf.int[15],         # 3
                                
                                # Age
-                               s_adj$conf.int[12]),
+                               s_adj$conf.int[16]),
+                 
                              p_value = c(# Recurrence
                                NA,
                                NA,                          # liver ref.
-                               s_adj$coefficients[13],          #lung
+                               s_adj$coefficients[17],          #lung
                                
                                # Neoadjuvant
                                NA,
                                NA,                          # no ref,
-                               s_adj$coefficients[14],          # yes
+                               s_adj$coefficients[18],          # yes
+                               
+                               # Stage
+                               NA,
+                               NA,                          # 2 ref,
+                               s_adj$coefficients[19],      # 3
                                
                                # Age
-                               s_adj$coefficients[15]),
+                               s_adj$coefficients[20]),
+                 
                              FACTOR = c(T, F, F,
+                                        T, F, F,
                                         T, F, F,
                                         T))
 
@@ -148,5 +183,5 @@ p_ = forest(data = df_[, c("Subgroup","Number","HR (95% CI)", " ", "p_value")],
             theme = forest_theme(ci_Theight = 0.2,     # T-end CI's
                                  footnote_gp = gpar(cex = 1, family = 'Helvetica', fontface = "bold", col = "black")))
 
-ggsave(filename = "forestplot_OS_cohort.pdf", plot = p_, width = 7.5, height = 7.5)
+ggsave(filename = "forestplot_OS_cohort_neoadjuvant_stage.pdf", plot = p_, width = 7.5, height = 7.5)
 graphics.off()

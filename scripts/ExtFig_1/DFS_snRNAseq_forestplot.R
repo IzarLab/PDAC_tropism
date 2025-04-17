@@ -1,5 +1,6 @@
 library(survival)
 library(ggplot2)
+library(grid)
 library(gridExtra)
 library(survminer)
 library(swimplot)
@@ -8,7 +9,7 @@ library(forestploter)
 
 # Reading cohort data in ####
 
-fcohort_ = read.delim(file = "../../Misc/fullcohort_cleaned.tsv", header = T, sep = '\t', quote = "", as.is = T, check.names = F, stringsAsFactors = F, na.strings = c('','NA','n/a','na'))
+fcohort_ = read.delim(file = "Misc/fullcohort_cleaned.tsv", header = T, sep = '\t', quote = "", as.is = T, check.names = F, stringsAsFactors = F, na.strings = c('','NA','n/a','na'))
 fcohort_$vital_status[!fcohort_$vital_status %in% 1] = 0      # event of interest is dead:1, the rest 0
 
 fcohort_$diagnosis_dt = as.Date(fcohort_$diagnosis_dt)
