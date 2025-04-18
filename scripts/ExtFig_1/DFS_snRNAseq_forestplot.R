@@ -25,18 +25,27 @@ fcohort_$yrs_to_recurrance_or_death = pmin(fcohort_$yrs_to_recurrance,fcohort_$y
 
 fcohort_$recur_status = pmax(fcohort_$recur, fcohort_$vital_status)
 
+# converting non-character variables to factors
+
+fcohort_$neoadjuvant = factor(fcohort_$neoadjuvant)                       # 0 (no) ref.
+fcohort_$stage = factor(fcohort_$stage)                                   # 2 ref.
+fcohort_$sex = factor(fcohort_$sex)                                       # F ref.
+fcohort_$grade = factor(fcohort_$grade)                                   # 1 ref.
+fcohort_$nodal_status = factor(fcohort_$nodal_status)                     # 0 (no) ref.
+fcohort_$adjuvant = factor(fcohort_$adjuvant)                             # 0 (no) ref.
+
 # Survival analysis by multivaiate Cox Proportional Hazards Regression Model ####
 
 # cohort dataset
 seq_cohort = fcohort_[fcohort_$sequenced %in% 1,]
 seq_cohort$recur_site[seq_cohort$recur_site %in% "liver/local"] = 'liver'
-dt_ = rbind(seq_cohort[seq_cohort$recur_site %in% "lung",],seq_cohort[seq_cohort$recur_site %in% "liver",])
+dt_ = seq_cohort[seq_cohort$recur_site %in% c("liver","lung"),]
 
 # create a survival object
 s_obj = Surv(dt_$yrs_to_recurrance_or_death, dt_$recur_status)
 
 # adjusted model
-fit_adj = coxph(s_obj ~ factor(recur_site) + factor(neoadjuvant) + age, data = dt_)
+fit_adj = coxph(s_obj ~ recur_site + neoadjuvant + age, data = dt_)
 s_adj = summary(fit_adj)
 
 # Forest plot ####
