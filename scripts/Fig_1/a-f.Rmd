@@ -167,7 +167,7 @@ for(dt_ in list(dt_liv_none, dt_lung_none))
                    p_adj = format(round(s_adj$coefficients[1, "Pr(>|z|)"],4), scientific = T),
                    row.names = rownames(s_crd$coefficients)) )
   # KM curve
-  t_ = if(i_ == 1){'Cohort OS (none vs liver)'}else{'Cohort OS (none vs lung)'}; i_ = i_ + 1
+  t_ = if(i_ == 1){'Cohort OS (liver vs none)'}else{'Cohort OS (lung vs none)'}; i_ = i_ + 1
   p_ = ggsurvplot(survfit(s_obj ~ recur_site, data = dt_),
                    xlab = 'Years', title = t_,
                    palette = c('red','blue'),
