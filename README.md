@@ -10,6 +10,7 @@ There is no specific installation guide other than installing common R or Python
 | dbscan                  | 1.2.0                  | anndata          | 0.11.1     |
 | doParallel              | 1.0.17                 | IPython          | 8.17.2     |
 | dplyr                   | 1.1.4                  | kneed            | 0.8.5      |
+| forestploter            | 1.1.3                  | kneed            | 0.8.5      |
 | ggplot2                 | 3.5.1                  | matplotlib       | 3.9.2      |
 | ggpubr                  | 0.6.0                  | matplotlib-inline | 0.1.6      |
 | ggrepel                 | 0.9.6                  | numpy            | 1.26.2     |
@@ -35,6 +36,7 @@ There is no specific installation guide other than installing common R or Python
 | statmod                 | 1.5.0                  |                  |            |
 | survival                | 3.8.3                  |                  |            |
 | survminer               | 0.5.0                  |                  |            |
+| swimplot                | 1.2.0                  |                  |            |
 | tidyr                   | 1.3.1                  |                  |            |
 | viridis                 | 0.6.5                  |                  |            |
 | xlsx                    | 0.6.5                  |                  |            |
